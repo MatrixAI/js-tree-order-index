@@ -17,3 +17,7 @@ That is, B+tree represents a mix between implicit and explicit data structure. I
 So entries are just arrays. Arrays that are not meant to be dynamic, that is they are meant to be fixed size. I'm not sure whether this really means anything in JS, but we can prealloate arrays for this purpose.
 
 Ok so we should be using an interface for OrderLink.
+
+---
+
+Have to figure out how to implement node insertion with regards to BOTree, the way I understand it is with entry pair, opening and closing that gets inserted, since we represent an interval with an entry pair.
