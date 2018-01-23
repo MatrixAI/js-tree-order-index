@@ -45,6 +45,8 @@
     "rollup-plugin-node-resolve": "^3.0.0"
   },
   "dependencies": {
-    "babel-runtime": "^6.26.0"
+    "array-fixed": "^0.2.0",
+    "babel-runtime": "^6.26.0",
+    "functional-red-black-tree": "^1.0.1"
   }
 }
