@@ -162,9 +162,17 @@ It works:
 
 ```
 const d = require('datascript');
-class DummyObj {}
-const obj1 = new DummyObj;
-const obj2 = new DummyObj;
+class DummyObj {
+  constructor (a, b) {
+    this.a = a;
+    this.b = b;
+  }
+}
+
+const obj1 = new DummyObj(2, 1);
+const obj2 = new DummyObj(1, 1);
+
+
 const db = d.empty_db();
 const db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [':db/add', 2, 'obj', obj2]]);
 
@@ -177,3 +185,20 @@ It may not work properly with normal objects though: https://github.com/tonsky/d
 How to setup indexing now. And what about temporary ids? Weakmaps with keys as objects. The object is the returned temporary id. When that object is GCed, the weakmap no longer has it. Basically now you can resuse that id. Note that what is that id? Well that value of the key in this case is whether it has a particular id value or not? Actually that makes no sense, how would you then make sure you can reuse ids that were never used? You need a resource counter, but this requires explicit deallocation. Yea I think it just has to be explicit. That's all. We can combine this with resource-counter, or maybe entity ID temporary id from datascript. Not sure how that would be implemented though.
 
 Let's see how that would be done.
+
+It turns out that normal objects get copied, but class instantiated objects are not being copied. Instead they are still by reference. So we must be careful to make sure that the objects being inserted into our datascript are class instantiated objects, the only difference where the constructor is different from Object, that's all! In fact you can even mutate them afterwards. Still I think it should be made explicit.
+
+It is how ever recommended to instead use object with explicit object ids being inserted into datascript. This is the example:
+
+```
+db = d.empty_db({"obj-id", {":db/index" true}});
+db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [":db/add", 1 "obj-id" obj1.id]
+                     [':db/add', 2, 'obj', obj2], [":db/add", 2, "obj-id", obj2.id]
+
+;; Now query by obj id:
+d.q('[:find (pull ?e [*]) :in $ ?obj :where [?e "obj-id" ?obj]]', db1, obj1.id);
+```
+
+So now you need a factory method that gives me the object id instead. This could use the js-resource-counter, where each object allocates a number that it knows about, and only on deletion is the id deallocated which allows the factory to reuse that id. So yes this could work.
+
+Also the id itself now needs to be attached to an indexed datascript attribute. Like `object/pointers-id`. But not sure how to add the pointers itself.
