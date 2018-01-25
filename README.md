@@ -202,3 +202,56 @@ d.q('[:find (pull ?e [*]) :in $ ?obj :where [?e "obj-id" ?obj]]', db1, obj1.id);
 So now you need a factory method that gives me the object id instead. This could use the js-resource-counter, where each object allocates a number that it knows about, and only on deletion is the id deallocated which allows the factory to reuse that id. So yes this could work.
 
 Also the id itself now needs to be attached to an indexed datascript attribute. Like `object/pointers-id`. But not sure how to add the pointers itself.
+
+So maybe the point of having pointer ids is intended for indexing, as indexing in a btree relies on order or something. Ok I can accept that. Too bad no hash based indexing. As for the actual ids themselves, we can maintain a weak map, and js-resource-counter that will handle these ids that are inserted and deallocated when not needed. Note that when they are really deleted they need to have their id deallocated. What about the db ids themselves?
+
+```
+var d = require('datascript');
+
+const db = d.init_db(
+  [
+    [1, 'obj', 2],
+    [2, 'obj', 2]
+  ]
+);
+
+d.pull(db, '[*]', 1);
+
+// another way is this, where you can state the same fact twice
+// but the schema says that the cardinality of the thing is many
+// so the end result is that obj gets appended directly
+const db = d.init_db(
+  [
+    [1, 'obj', 2],
+    [1, 'obj', 2]
+  ],
+  {'obj': {':db/cardinality': ':db.cardinality/many'}}
+);
+
+
+const db = d.empty_db();
+const db1 = d.db_with(
+  db,
+  [
+    [':db/add', 1, 'obj', 2],
+    [':db/add', 2, 'obj', 2]
+  ]
+)
+
+```
+
+Ok so we can `init_db`, but the way it is done is not the same as using `db_with`, where this one takes an array of vectors, representing facts. Additional facts that is. Whereas `init_db` takes some sort of datoms list. Not sure how it's meant to be used however. Note that `init_db` would only be useful for bulk loading. Ok so I now I know. Also you can init db with things like `e: ..., a: ..., v: ...`, so not just vectors but also records.
+
+That's really interesting!
+
+
+```
+const d = require('datascript');
+class DummyObj {}
+const obj1 = new DummyObj;
+const obj2 = new DummyObj;
+const db = d.empty_db({'obj': {':db/index': true}});
+const db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [':db/add', 2, 'obj', obj2]]);
+```
+
+The above shows you that you cannot index the objects. Ok... it returns with an error about not being able to compare 2 objects.
