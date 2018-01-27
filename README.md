@@ -247,11 +247,46 @@ That's really interesting!
 
 ```
 const d = require('datascript');
+
+const map = new WeakMap;
+
 class DummyObj {}
-const obj1 = new DummyObj;
-const obj2 = new DummyObj;
-const db = d.empty_db({'obj': {':db/index': true}});
-const db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [':db/add', 2, 'obj', obj2]]);
+let obj1 = new DummyObj;
+let obj2 = new DummyObj;
+
+map.set(obj1, 1);
+map.set(obj2 ,2);
+
+const db = d.empty_db();
+
+let db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [':db/add', 2, 'obj', obj2]]);
+let db2 = d.db_with(db1, [[':db/add', 1, 'obj', 2]]);
+
+db1 = undefined;
+obj1 = undefined;
+
+// then obj1 should be gone right
+// damn how do we test this!?
+// chrome devtools show that this is true!!!
+// woo
+// now all i have to do is make sure my counter is immutable
 ```
 
 The above shows you that you cannot index the objects. Ok... it returns with an error about not being able to compare 2 objects.
+
+We need to test that when we overwrite the object for datascript if that object still exists in memory. We can use a weakmap to as if it still exists however. Good way to test datascript.
+
+
+```
+const d = require('datascript');
+
+class DummyObj {}
+let obj1 = new DummyObj;
+let obj2 = new DummyObj;
+
+const db = d.empty_db();
+let db1 = d.db_with(db, [[':db/add', 1, 'obj', obj1], [':db/add', 2, 'obj', obj2]]);
+let db2 = d.db_with(db1, [[':db/add', 1, 'obj', obj1]]);
+```
+
+The above shows that db1 and db2 are not the same databases.
