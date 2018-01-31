@@ -290,3 +290,142 @@ let db2 = d.db_with(db1, [[':db/add', 1, 'obj', obj1]]);
 ```
 
 The above shows that db1 and db2 are not the same databases.
+
+---
+
+We now have a fully persistent counter.
+
+We are going to combine this with data script to create a fully persistent NodeTable.
+
+The counter is needed as we need to deal with ids generated for each openlink and closelink, since these objects have no order and weren't able to be indexed by datascript.
+
+Using these things, we can insert and instead index on these extra properties.
+
+That allows one to query the table by a particular link open or closed.
+
+However this means we need to maintain a weakmap of open links and close links to their ids that are generated for them.
+
+Note that when they are deleted, we must then explicitly remove their ids and deallocate from the counter.
+
+When this happens, this is an immutable modification on the datascript. Correspondingly it's an immutable modification on counter as well. This means we maintain the counter for creation of new things.. too.
+
+Also shouldn't be exporting our types? Not really..
+
+Also our weakmap that is adding new stuff. Don't we need an immutable thing that associated objects to the counter id as well?
+
+As a modification means generating a unique id from the counter, and then passing that into the map between objects (unordered stuff)...
+
+So we need an immutable map now to act as our tagging system.
+
+I know where to find this pretty easily. We can use immutable.js, immer, red black tree... etc.
+
+Or we just use another datacript database. This one associates... Wait that's dumb, we cannot index by objects anyway. That's the reason why we are using datascript. So it has to be something where we can query by object.
+
+Wait we need a weakmap though! Cause we don't have to keep track on the objects twice. Damn not possible to create an immutable weakmap.
+
+So it just means we have to explicitly delete it from the immutable map as well.
+
+```
+const d = require('datascript');
+
+const db = d.empty_db();
+
+db1 = d.db_with(db, [
+  [':db/add', -1, 'key', 1],
+  [':db/add', -1, 'key', 2],
+  [':db/add', -1, 'key', 3],
+]);
+
+db2 = d.db_with(db1, [
+  [':db/add', -1, 'key', 4],
+  [':db/add', -2, 'key', 5],
+  [':db/add', -3, 'key', 6],
+]);
+
+// each negative number is given a different id
+// but how to find the id?
+
+d.pull(db2, '[*]', 1);
+d.pull(db2, '[*]', 2);
+d.pull(db2, '[*]', 3);
+d.pull(db2, '[*]', 4);
+```
+
+// oh the -1 doesn't appear to make sure we have the right entity
+// and transaction appears to require a connection
+
+
+// once you have an entity, you can lazily get the actual value by doing `e.get('prop')`
+
+```
+let e = d.entity(db, 1); // entity implements ES6 map interface
+e.get(':db/id');
+e.get('key');
+```
+
+Transactions seem to allow us to get the id, but why not normal functions?
+
+Use resolve tempid to setup correspondence to the real key.
+
+```
+const d = require('datascript');
+
+conn = d.create_conn();
+
+// -1 refers to the same id here
+// so -2 might refer to multiple
+
+tx_report = d.transact(conn, [
+  [":db/add", -1, "name", "Ivan"],
+  [":db/add", -1, "age", 17]
+  [":db/add", -2, "name", "SOMEBODY"]
+]);
+
+tx_report = d.transact(conn, [
+  { ':db/id': -1, name: 'Ivan' },
+  { ':db/id': -2, name: 'Blah'}
+]);
+
+d.resolve_tempid(tx_report.tempids, -1);
+d.resolve_tempid(tx_report.tempids, -2);
+
+// oh shit it works
+// actually it's really easy, resolve_tempid just fetches our object details lol
+```
+
+This doesn't give us all teh ids that are being used for some reason..
+So I don't think `:db/add` makes sense. We can also use `:db/id`. Instead, so would that work instead?
+
+
+So we shall use the transact, but with a connection created from the db. How do we later close the connection?
+
+To get the db from a conn, use `d.db(conn)`. Then you get back the db! Ok so we just get a conn from the db, and then use that to perform the transaction, and then convert it back to the db so we can have it at the state after all transactions are performed.
+
+Example for retraction:
+
+```
+const d = require('datascript');
+
+const db = d.empty_db();
+
+db1 = d.db_with(db, [
+  [':db/add', -1, 'key', 1],
+  [':db/add', -1, 'key', 2],
+  [':db/add', -1, 'key', 3],
+]);
+
+db2 = d.db_with(db1, [
+  [':db.fn/retractEntity', 1]
+]);
+
+// retraction has to retract every specific attribute
+// damn... and you NEED the value too
+
+// each negative number is given a different id
+// but how to find the id?
+
+d.pull(db2, '[*]', 1);
+d.pull(db2, '[*]', 2);
+d.pull(db2, '[*]', 3);
+d.pull(db2, '[*]', 4);
+```
