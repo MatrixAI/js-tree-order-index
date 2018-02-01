@@ -428,4 +428,8 @@ d.pull(db2, '[*]', 1);
 d.pull(db2, '[*]', 2);
 d.pull(db2, '[*]', 3);
 d.pull(db2, '[*]', 4);
+
+// find where id is equal to something
+// will tell you if the id was retracted or not unlike entity
+d.q('[:find ?e :in $ ?e :where [?e]]', db2, 1);
 ```
