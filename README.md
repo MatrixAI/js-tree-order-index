@@ -412,6 +412,7 @@ db1 = d.db_with(db, [
   [':db/add', -1, 'key', 1],
   [':db/add', -1, 'key', 2],
   [':db/add', -1, 'key', 3],
+  [':db/add', -2, 'key', 3],
 ]);
 
 db2 = d.db_with(db1, [
@@ -436,6 +437,342 @@ d.q('[:find ?e :in $ ?e :where [?e]]', db2, 1);
 d.q(
   '[:find (pull ?e [*]) :in $ [?key ?value] :where [?e ?key ?value]]',
   db1,
-  ['key', 1]
+  ['key', 3]
+);
+
+
+d.q(
+  '[:find (pull ?e [*]) :in $ [?key ?value] :where [?e ?key ?value]]',
+  db1,
+  ['key', 4]
 );
 ```
+
+
+Make sure to keep track of the parent pointers when you do the path copying.
+An iterator is only consistent as it maintains the current tree as its iterating.
+Any modification that occurs against the iterator would need give you back a new tree.
+
+Alternatively, one starts a transaction, from that transaction, they start an iterator.
+That iterator then allows one to do operations against the current tree.
+
+```
+  oi = oi.transaction((ot) => {
+    op1(ot);
+    op2(ot);
+  });
+```
+
+Usually the idea of a transaction, is that you don't get back a new tree. So within that transaction, everything is mutable. So how does this work exactly? Since each operation can conflict with another.
+
+If `op1` and `op2` don't conflict with each other, it's totally fine. But if they do, then you have a problem.
+
+What this means starting a transaction, means you get a mutable tree for that time being. So as your iterating, you're iterating with a mutable tree. So as you mutating the tree, you will encounter things you are iterating to. So this has a bad semantics, but you have to be careful with your iteration.
+
+Alternatively, if you start an iteration, and then you start a transaction.
+
+```
+oi = oi.transaction((ot) => {
+  i = ot.getIterator();
+  i = i.next();
+  i.insertSibling(node);
+  i = i.next(); // this is the node that you just inserted
+});
+```
+
+Well the idea.. is that how does this work exactly
+
+```
+i = oi.getIterator(p);
+i = i.next();
+oi2 = i.insertSibling(node);
+i = i.next(); // this is not node
+```
+
+Each operation then gives you a new tree.
+
+So if you have interleaved iterators:
+
+```
+i1 = oi.getIterator(p);
+i2 = oi.getIterator(p);
+
+i1.next();
+oi2 = i1.insertSibling(node); // because this doesn't return the iterator itself, are we saying this should be returning the iterator instead
+
+i1_ = i1.insertSibling(node); // this way you can weave in the iterator each time, you're iterating on the new modified tree
+
+// you can always get three for the given iterator again, as each iterator represents a snapshot onto the tree (a sort of capture)
+
+oi3 = i1_.getTree();
+
+
+
+i2.next();
+oi3 = i2.insertSibling(node);
+
+// oi2 !== oi3
+```
+
+So this all works nicely!
+
+Now how do you do this:
+
+```
+oi = oi.transaction((ot) => {
+  ot.insertAt(p, node);
+  ot.insertAt(p2, node);
+  // the above don't conflict with each other
+  // so it's all good
+  ot.deleteAt(p);
+  ot.insertAt(p, node);
+  // this conflicts with the top, and should fail
+  // because the p no longer exists
+  // what is p exactly? it is the actual pointer referring to a node (along with some other direction notation)
+});
+```
+
+Remember insertion operations, means navigating to a position and inserting!
+
+After all, one should compare against DeltaNI.
+
+For concurrency control, that is interleaved iterators that should merge their changes accordingly, how does one do this? Well the main idea is that, we need to represent the 2 iterations as 2 transactions (because each maintain a snapshot of the data). Then when they finish iterations, that means their transaction is committed. Then they essentially need to be merged.
+
+```
+
+oi = oi.transaction((ot) => {
+
+  i = ot.getIterator(p);
+
+});
+
+oi = oi.transaction((ot) => {
+
+
+});
+
+i1 = oi.getIterator(p);
+i2 = oi.getIterator(p);
+
+i1.next();
+oi2 = i1.insertSibling(node);
+
+i2.next();
+oi3 = i2.insertSibling(node);
+```
+
+Ok so if we imagine that iterators actually return themselves (along with any data) they are meant to return. Then we can just use that. Ok this makes more sense now..
+
+```
+// if normally iterator manipulation (what do we mean by p?)
+// p is some combination of iterator + direction
+// cause the iterator is a cursor into the tree
+// so it always points to something exactly
+// but wait we have 2 notions of cursor
+// a cursor that "points" to a node
+// a cursor that "points" to an entry (the positive/negative parts of a node)
+// we can combine both notions, such that a cursor always points to a node + opening/closing entry
+// when it's pointing at any one entry, we update both, such that we can go to a node opening or closing at any point
+// so any pointer to a row in the table can be considered a cursor, but it's more overloaded than that, we have both a pointer to the tree, and a pointer to the table (both are immutable) (but with the table, we don't have an exact pointer to a row, we instead have the relevant node), that being said the relevant node maybe filled (queried) from the database, since we know the database is immutable, we can be sure that it doesn't change from underneath us, so we can be sure that this is the node that we care about
+
+
+
+oi = oi.transaction((ot) => {
+
+  // since we are in a transaction, we expect cursors to not return new cursors, but instead just mutate the current tree
+  c = ot.getCursor(p);
+  c.insertSibling(node);
+  // but is c still stable now?
+  // what does this do?
+  c.next();
+  // is it pointing at node, or the old node?
+  // but gut feeling is that it's pointing at the new node
+  // that was inserted, here you need to be careful now!
+
+});
+
+
+
+c = ot1.getCursor(p);
+c = c.insertSibling(node);
+c = c.next() // this doesn't involve a copy, since no modification occurred (but matches the API)
+c2 = c.clone() // this would actually clone the cursor into a different one
+c = c.insertSibling(node);
+ot2 = c.getTree()
+// ot1 and ot2 is not the same tree anymore
+// but this is not very efficient
+
+// interleaved cursors are no longer a problem since each cursor is maintaining their own thing, and they really are diverging
+// can you have 2 cursors on the same tree... sure, but unless you modify, then you need to merge or figure out using a BIGLOCK representation
+// at that point you need a transaction manager that can merge 2 updates
+// PESSISMISTIC OR OPTIMISTIC (we can use CAS operations) and retry kind of thing
+
+// with the counter, the only CAS operation would occur on conflicting numbers
+// [,c2] = c.allocate()
+// [,c3] = c.allocate()
+// c.transaction((ct) => {
+//  ct.allocate();
+//  ct.deallocate();
+// })
+// conn = startConn()
+// async1(conn)
+// async2(conn)
+// now conn may run asynchronously
+// async1:
+//   conn.transaction(ct => {
+//     setTimeout(() => { ct.allocate(); });
+//   })
+// wait it's not possible to have conflicts in this way, each transaction runs exactly
+// what happens then? well the transaction finished, but you still have ct somewhere
+// then that means it's still closure that contains the original counter
+// but the callback already finished, and packaged up a new CounterImmutable
+// what happens is that, the old tree is still referenced by ct, but ct now has nothing to do with the new tree, so if that allocates against the tree, it's still using the old snapshot
+
+// it still refers to tree in the closure, but nothing can access that tree
+// it still gets new trees when allocating
+// it still has that snapshot
+// the tree that was returned, is now not the tree that ct is working against
+// so it's pointless, you can't do anything with it
+
+
+```
+
+
+Should `c.next()` copy and give you a new cursor completely independent? I feel like returning back c is not very intuitive. It should be instead, if I'm really moving a cursor, then it should just be `c.next()`, not returning anything. If one wants to clone, then it should be explicit with `c.clone()`. And all that is really doing is passing the tree into a new counter, such that the new counter has to deal with the new tree that gets mutated and table as well.
+
+In the context of transactions, it's only possible for there to be a concurrent merge in asynchronous operations in JS. Normally using modification returns new cursors, this works even with interleaved cursors so they never conflict, they are always diverging. Using modification while in transaction is just mutable and you have to deal with errors as you go (this is the high performance problem, but you maybe you shouldn't be iterating in a transaction). You cannot get interleaved transactions in JS due to run-to-completion semantics for the transactions, each is atomic operation anyway. An iterator inside a transaction should just respect the mutability of everything, so you don't get stable iteration there. But if you wrap the index tree within a "transaction manager", then you pass these 2 into separate async operations. Then there should some sort of concurrent merging behaviour, where 2 semantically separate operations should be able to merged together, but if not, one should fail, and have to retry with new assumptions. This merging process is complicated, and requires that the underlying data structure supports a sort of Optimistic Control, either with CAS based operations. The problem, is that we have to enumerate the kind of conflicts that can occur, and these can occur within the rebalancing operations, 2 operations may rebalance the tree in different ways, we don't want to have to merge conflicting differently balanced stuff, but instead merging at the semantic level, 2 nodes inserted at different areas should not conflict with each other.
+
+Consider this concept:
+
+```
+   A
+  / \
+ B   C
+```
+
+You have 2 asynchronous operations that work against the same "connection" to a global tree.
+
+Op1 wants to do this, an inner node relocation:
+
+```
+   A
+    \
+     B
+      \
+       C
+```
+
+Op2 wants to do this, add a new leaf under B at position 0.
+
+```
+     A
+    / \
+   B   C
+  /
+ D
+```
+
+What's the merging of the two?
+
+```
+   A
+    \
+     B
+    / \
+   D   C
+```
+
+OR:
+
+```
+   A
+  / \
+ D   B
+      \
+       C
+```
+
+Or is this just a conflict?
+
+We would need to define the formal semantics of this system. To make this work. If we are inserting a leaf at position 0, that's saying we want D to be the first child of B. If we are doing a inner node relocation, we are saying we want B to be the parent of C. These 2 statements are not strictly conflicting with each other, but leaves us with some ambiguity. There are 2 ways to resolve this, just choose any one of them (deterministically speaking) because maybe it doesn't matter (in fact this can depend actually on which transaction occurred first or perhaps which transaction committed first). Or fail one of the transactions, and ask them to repeat the order with new assumptions. If the order is repeated by saying I want D to be the 0th child of B, then it now it is just done, and we get the first merged tree.
+
+How does this exactly get merged? Well we would need some sort of locking system on each node. When transaction 1 starts inner node movement, it needs to tell everybody else and atomically lock node B. This particular lock has special semantics, as it would tell the connection manager to then receive transaction 2 to add a new leaf to child position 0. Then this would just attempt to synchronise the 2 operations. As they are kind of independent. If transaction 2 REALLY wanted to make sure that D is infact the first child of B, it would need to acquire a lock on B, if that B is being moved then it has to block and wait on it. And then it just inserts D as ahead of C. Alternatively we can use optimistic concurrency control, where transaciton 2 REALLY wants to make sure D is the first child, then what would need to happen is that it would try to do it, but it would fail to do so...
+
+So the connection manager has to make decisions on which transactions started first, which modification started first, and which transaction committed first, which then tells us whether we are doing pessimistic concurrency control (the transaction is blocked) or optimistic concurrency control (the transaction fails) or if they are merged with no problems. There would need to be more formal semantics over what those operations really are.
+
+
+I would need to read more about MVCC in other situations before figuring this out fully. Also fat node techniques as well.
+
+Anyway to make this immutable, we need to combine it with rebalancing. Such as that as we are rebalancing (simplifying the tree), we also take care to copy whatever that needs to be copied.
+
+
+```
+// package reference-obj
+
+class Reference<T> {
+
+  _value: T;
+
+  contructor (value: T) {
+    this._value = value;
+  }
+
+  static from (value: T) {
+    return new Reference(value);
+  }
+
+  get (): T {
+    return value;
+  }
+
+  set (value: T): void {
+    this._value = value;
+  }
+
+}
+
+x = Reference.from(true);
+
+x = Ref(true); // also we can do this
+
+x = Ref.from(true); // this is smaller too
+
+x = new Ref(true); // this is smaller too
+
+// also we can have a short name P
+// import { Reference as P } ...
+
+// new P(true)
+// P.from(true);
+
+x.set(false);
+x.set(true);
+x.set('abc'); // bad!
+
+x(value); // sets the value
+x // what is x?
+
+// we should overload it depending on what the x is
+// so it acts like x
+// in fact even proxy everything to it as well in a way
+```
+
+---
+
+We need to make sure that if 2 keys have the same objects and they need to be tagged, then they are given the same tag. And we just use 1 tag for each.
+
+But wait, if one key gets changed for another, now we need 2 different tags, we have to keep track of the tags.
+
+Damn how do we make sure we can encapsulate the notion of tagging objects?
+
+[Object, tagger] = tagger.tag(Object)
+
+The result is the object you get is tagged. The tagger is a new tagger (as it is immutable). The tagger needs to maintain knowledge of the `indexTags`, so we know if we have things that are the same object. So if multiple objects are the same. Cause the tagMap will map objects to tags. And those objects may be the same when we ask for them.
+
+So the idea is this:
+
+If we are to ask SEARCH for WHERE key = object.
+
+The tagger will take the key, give us the key-tag. And then give us the unique number.
+
+Given key, object, it gives back `key-tag`, id.

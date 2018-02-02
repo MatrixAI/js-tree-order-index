@@ -50,6 +50,7 @@
     "datascript": "^0.16.3",
     "functional-red-black-tree": "^1.0.1",
     "immutable": "^3.8.2",
+    "reference-pointer": "0.0.2",
     "resource-counter": "^1.2.2"
   }
 }
