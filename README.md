@@ -776,3 +776,138 @@ If we are to ask SEARCH for WHERE key = object.
 The tagger will take the key, give us the key-tag. And then give us the unique number.
 
 Given key, object, it gives back `key-tag`, id.
+
+So the same object must give back the same id.
+
+But when we delete or remove objects, we are saying that here is key, object. And we may need to remove certain pairs. That is key1, key2 may refer to Object1, but removing a pair.
+
+So when we tag a an
+
+---
+
+The only way to make the tree immutable is not to use path copying, but the fat node strategy.
+
+Research on the fat-node strategy, dealing with multiple parent pointers, and maybe deltani, and other ways of managing this with MVCC and B+trees.
+
+Possibly trying to hook into the GC system to remove old pointers. But also JS doesn't allow this.
+
+https://stackoverflow.com/questions/29333017/ecmascript-6-class-destructor
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Memory_Management
+
+See Observable too.
+
+https://www.cs.cmu.edu/~sleator/papers/making-data-structures-persistent.pdf
+
+Page 97:
+
+With the fat node approach, we can make an ephemeral linked structure fully persisten at the worst case space cost of O(1) per update step, and an O(log m) worse case time cost per access or update step. With a variant of node copying called node splitting, we can make an ephemeral linked structure of constant bounded in-degree fully persisten at O(1) amortized time and space cost per update step and an O(1) worst case time cost per access step.
+
+This partial ordering is defined by a rooted version tree. Whose nodes are the versions (0 through m), with version i the parent of version j if version j is optained by updating version i. So there is a linear ordering of versions. Version 0 is the root of the version tree. The sequence of updates giving rise to version i corresponds to the path in the version tree from the root to i.
+
+When a new version i is created, we insert i into the version list immediately after its parent (in the version tree).
+
+The resulting list defines a preorder on the version tree.
+
+The direction towards the front of the version list is leftward. The direction towards the back of the list is rightward.
+
+We need to also be able to determine if 2 versions i, j. That i precedes or follows j in the version list. This list order problem has been addressed with a list representation supporting order queries in O(1) worst case time. With O(1) amortized time bound for insertion. There's also a more complicated one with both query and insertion time being O(1). This is a Dietz and Sleator[11].
+
+Having dealt with the navigation issue. We can investigate how to use fat nodes to make a linked structure fully persistent.
+
+The fat nodes are where each node holds an arbitrary number of values PER field. Each extra field has an associated field name and version stamp. The version stamp indicates the version in which teh named field was changed to have the specified value. In addition, each fat node has its own version stamp. So fields have version stamps, and nodes have version stamps.
+
+Consider update operation i, when an ephemeral update step creates a new node, we create a corresponding new fat node, with version stamp i. Containing the appropriate original values of the information and pointer fields. Right this means that his new node that is inserted has a version stamp that is different from all the other nodes (as it is a new node).
+
+When an ephemeral update step changes a field value in a node, we add the corresponding new value to the corresponding fat node. Along with the name of the field being changed and version stamp of i. For each field in a node, we store only 1 value per version. When storing a field value, if there is already a value of the same field with the same version stamp, we overwrite the old value. Original field values are regarded as having the version stamp of the node that contains them (right so they have a default version stamp).
+
+If it is not allowed that the structure can change the same field to the same value within the same transaction, there's no need to test if the value is the same with the same version stamp.
+
+We navigate through the persistent structure as follows. When an ephemeral access step is applied to version i accesses field f of a node. So access operations are given a particular version tag to use. We access the value in the corresponding fat node whose field name is f, choosing among several such values with the maximum version stamp NO GREATER than i. So if access operation with version i is being used, we return the value that corresponds to version i preferably or a version before it. But never return a version greater than i. If none fits, then there is no value for this access operation!
+
+We also need an auxiliary data structure to store the access pointers of the various versions.
+
+This structure consists of an array of pointers for each access pointer name. After an update operation i, we store the current values of the access pointers in the ith positions of these access arrays. With this structure, initiating access into any version takes O(1) time. This is just saying that there's a way to always access each version in O(1) by creating an array of versions. Is this talking about each node pointer that points to other nodes? Not sure...
+
+It suffices to regard each original field value in a node as having a version stamp of 0.
+
+The example on page 92, we have a fat node approach for partial persistence for a binary search tree. This tree performs tree rotation as well for balancing. The point is, each arrow is attached with a version number. We begin version number at 1, since the tree by default would be empty (and that would be version 0). So each insertion operation is given a version stamp. We have operations:
+
+```
+Insertions
+E - 1
+C - 2
+M - 3
+O - 4
+A - 5
+I - 6
+G - 7
+K - 8
+J - 9
+
+Deleteions
+M - 10
+E - 11
+A - 12
+```
+
+This shows then the tree with new pointers with new numbers. For example at the deletion of M, that's the 10th operation. Here we delete M, rotate K to the the position of M, which means J needs to be the right child of I. We can see a bunch of pointers with version stamp 10. It's like we are overlaying pointers basically. The fat node of E, is now pointing to both M with version stamp 3, but also K with version stamp 10. The problem with this, is that there's no explicit garbage collection of the old version. Nothing here means you can lose access to all the pointers, unless those pointers were not stored in the nodes themselves, but instead elsewhere. Like a sort of array of version pointers, where when you are at E, you can ask for E's pointers at version I. And if they exist, they will be there. Suppose asking that is like asking whether I exist or not. Not sure if a weakmap could support this. Like maybe a multikeyed weakmap. So if something loses reference to the version 1, it should no longer exist. Problem is, version 1 is still useful for all the versions, since nothing removes E until the 11th operation, so if somehow you lose reference to version 1 - 10, then only then should E be garbage collected.
+
+The paper says that choosing which pointer in a fat node to follow when simulating an access step takes more than constant time. If the values of a field within a fat node are ordered by version stamp and stored in a binary search tree, simulating an ephemeral access or update step takes O(log m) time.
+
+This means that there is a logarithmic factor blow up in the times of access and update operations over their times in ephemeral structure.
+
+The path copying strategy described in the paper is quite different from the basic form of path copying, they appear to sometimes not actually copy the root depending on some situation. I think it's because they only cared about partial persistence in this case. Now back to page 98, we are finally back at full persistence. And here we have a version tree.
+
+It really shows the tree as before in a way. But instead it shows the operations that is applied, according to the pointers that is being used.
+
+We have version 0, with an empty node.
+
+Each node represents an update operation `i` or `d`. The nodes are labelled with the indices of the corresponding operations.
+
+This tree is of operations is not the same sort of operations as we examined. It's different.
+
+Seems like if you were to enforce a total order on this tree, it corresponds to inserting E, A, G, K, deleting E, inserting C, A, M, then inserting M, I, deleting M, inserting O. I don't understand this to be honest.
+
+So apparently with the fat node approach, navigating the versions now requires accessing the "version list". Rather than with respect to their numeric values. That is to find the value corresponding to field f in version i of ephemeral node x, we find the fat node x^ corresponding to x the value of field f whose version stamp is rightmost in the version list but not to the right of i.
+
+So wait.. we have a version list, and we need to consult it to get the right fat node.
+
+Updating differs slightly, insertion of new versions in the middle of a version list makes it in general necessary to store 2 updated field values per update step rather than 1. We begin update operation i by adding i to the version list as described above.
+
+This version list is actually a version tree, but with the ability to have a total order.
+
+When an ephemeral update step creates a new ephemeral node, we create a corresponding new fat node with version stamp i, filling in its original fields appropriately. Suppose an ephemeral update step changes field f of ephemeral node x.
+
+Let i+ denote the version after i in the version list. If such a version exists. To simulate the update step, we locate in the fat node x^ corresponding to x values v1 and v2 of field f such that v1 has the rightmost version stamp not right of i and v2 has leftmost version stamp right of i. (supremum and infimum?). Let i1 and i2 be the version stamps of v1 and v2.
+
+Remember that v1 and v2 are the values of the 2 versions (i1, i2) of the field f.
+
+If i1 = i, we replace v1 by the new appropriate new value of field f. If in addition i is the version stamp of node x^, v1 is a null pointer and i+ exists, we store in x^ a null pointer with field name f and version stamp i+, unless x^ already contains such a null pointer. So this is saying that if our operation version stamp is the same as i1, then all we do is update the value mutably, and then possibly create a null pointer that points to the field name f with version stamp i+ (the version after i in the version list if it exists).
+
+If i1 < i, we add the appropriate value of field f to node x^ with a field name of f and a version stamp of i. If in addition i1 < i and i+ < i2 (or i+ exists but i2 does not exist), we add x^ a new copy of v1 with field name f and a version stamp of i+. This guarantees that the new value of field f will be used only in version i and value v1 will still be used in versions i+ up to but not including i2 in the version list.
+
+This seems to imply that there are multiple versions in the version list, you can update any one of them, but that itself may not actually generate new versions (or if it does), why doesn't it diverge?
+
+At the end of the update operations we store the current values of the access pointers in the ith positions of the access arrays. The current values of the access pointers are those of the parent of i in the version tree as modified during the update operation.
+
+Let v be a value of a field f having version stamp i.
+
+This paper is not examining immutable structures. This is examining fully persistent ones where you can have multiple versions of the structure, and each version can be mutable changed. And as you change you still seem to be able to optionally make new versions. Basically upon doing an update, you can choose whether to update and create a new version, or update an existing version (and these updates occur mutably). This is slightly different situation from what I want, since in the case of immutable structure, each update is meant to create a new version (except in the limited case of a transaction).
+
+The actual inverse pointers is used for maintaining node splitting which was an improvement on top of fat node strategy used for their fully persistent binary search tree.
+
+On the wikipedia system, it says that given that purely functional computation is always built out of existing values, it would seem that it is impossible to create a cycle of references. This seems to mean that we wouldn't be able to create a purely functional data structure with cyclic references. And that such data structures would have to be a directed acyclic graph. But this can be avoided, since functions can also be defined recursively, this allows to create cyclic structures by using functional suspensions. Is it possible for us to discard parent pointers and instead use functional suspensions to go up to the parent?
+
+https://stackoverflow.com/questions/18007606/pure-functional-tree-with-parent-pointer
+
+The solution is to add indirection. You assign identities to the values. You then use them as lookup keys, you can think of an immutable pointer as an implementation of IDref, which always returns the same object. A cyclic graph can be represented as an adjacency graph, then you can deref the node by name is the same as looking it up in a map of names to nodes.
+
+---
+
+Ok so now we can use parent point table to relate a node to their parent node, and since after modification, there's a new parent id pointing to the new parent, this works. So now you get an immutable BOTree even with parent pointers. However our parent pointer table needs to be indexed by the parent id now. So now we have a unique id for each object too.
+
+Still each iterator when performing the operation needs to give you the new iterator with the new changes, the old iterator still works on the same thing.
+
+To prevent diverging trees, you need to wrap all your operations within a transaction.
+
+Alternatively, each operation is worked against a transaction manager that instead merges each operation back into a global tree, and this is done via locks and optimistic concurrency control.
