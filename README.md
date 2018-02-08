@@ -911,3 +911,19 @@ Still each iterator when performing the operation needs to give you the new iter
 To prevent diverging trees, you need to wrap all your operations within a transaction.
 
 Alternatively, each operation is worked against a transaction manager that instead merges each operation back into a global tree, and this is done via locks and optimistic concurrency control.
+
+Just need to get tagger tested, and then integrated.
+
+Then we just abstract out the parent pointers.
+
+---
+
+Note for concurrency control, there's some talk about it here too with regards to cursor for immutablejs:
+
+https://github.com/redbadger/immutable-cursor
+
+https://github.com/lukasbuenger/immutable-treeutils
+
+---
+
+Abstracting parent pointers
