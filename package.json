@@ -39,10 +39,10 @@
     "babel-preset-flow": "^6.23.0",
     "babel-register": "^6.26.0",
     "documentation": "^5.3.5",
-    "rollup": "^0.51.5",
-    "rollup-plugin-babel": "^3.0.2",
-    "rollup-plugin-commonjs": "^8.2.6",
-    "rollup-plugin-node-resolve": "^3.0.0"
+    "rollup": "^0.55.3",
+    "rollup-plugin-babel": "^3.0.3",
+    "rollup-plugin-commonjs": "^8.3.0",
+    "rollup-plugin-node-resolve": "^3.0.2"
   },
   "dependencies": {
     "array-fixed": "^0.2.0",
@@ -50,6 +50,7 @@
     "datascript": "^0.16.3",
     "functional-red-black-tree": "^1.0.1",
     "immutable": "^3.8.2",
+    "object-tagger": "^0.2.0",
     "reference-pointer": "0.0.2",
     "resource-counter": "^1.2.2"
   }
