@@ -232,10 +232,21 @@ test('deletion of nodes affects search', t => {
   let table4;
   [node2Deleted, table4] = table2.deleteNode(node2.id);
   t.deepEqual(node2Deleted, node2);
-
-
-
-
-
-  t.pass();
+  let results;
+  // searching for obj1 on table will give both nodes
+  results = table.searchNodes('objectKey', obj1);
+  t.is(results.length, 2);
+  t.deepEqual(results[0], node1);
+  t.deepEqual(results[1], node2);
+  // searching for obj1 on table2 will only give node2
+  results = table2.searchNodes('objectKey', obj1);
+  t.is(results.length, 1);
+  t.deepEqual(results[0], node2);
+  // searching for obj1 on table3 will only give node1
+  results = table3.searchNodes('objectKey', obj1);
+  t.is(results.length, 1);
+  t.deepEqual(results[0], node1);
+  // searching for obj1 on table4 will give no results
+  results = table4.searchNodes('objectKey', obj1);
+  t.is(results.length, 0);
 });
