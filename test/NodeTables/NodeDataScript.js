@@ -220,13 +220,21 @@ test('deletion of nodes affects search', t => {
   );
   // table2 will diverge with a deletion of node1
   let table2;
-  [, table2] = table.deleteNode(node1.id);
+  let node1Deleted;
+  [node1Deleted, table2] = table.deleteNode(node1.id);
+  t.deepEqual(node1Deleted, node1);
   // table3 will diverge with deletion of node2
   let table3;
-  [, table3] = table.deleteNode(node2.id);
+  let node2Deleted;
+  [node2Deleted, table3] = table.deleteNode(node2.id);
+  t.deepEqual(node2Deleted, node2);
   // table4 will diverge with deletion of node1 and node2
   let table4;
-  [, table4] = table2.deleteNode(node2.id);
+  [node2Deleted, table4] = table2.deleteNode(node2.id);
+  t.deepEqual(node2Deleted, node2);
+
+
+
 
 
   t.pass();
