@@ -408,4 +408,14 @@ test('update performs a patch on existing nodes', t => {
   t.is(results[0].objectKey, obj2);
   t.deepEqual(results[1], node2_);
   t.is(results[1].objectKey, obj2);
+  // update with something that is the same should do nothing
+  let [nodeNoChange, tableNoChange] = table.updateNode(
+    node2_.id,
+    {
+      textKey: data2.textKey
+    }
+  );
+  t.deepEqual(nodeNoChange, node2_);
+  t.is(nodeNoChange.objectKey, node2_.objectKey);
+  t.is(tableNoChange, table);
 });
