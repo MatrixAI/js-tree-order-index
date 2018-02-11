@@ -5,11 +5,6 @@ import NodeDataScript from '../../lib/NodeTables/NodeDataScript.js';
 // ava t.is uses Object.is
 // ava t.deepEqual does not check object identity
 // so even after using t.deepEqual, you must use Object.is to check object identity
-// datascript has an issue where literal objects gets copied on insertion/retrieval (one of them)
-// to prevent this, the object being used must be a class instantiated object
-// more precisely it's `({}).constructor === Object` that is the problem
-// so you have 2 options, use a dummy class like `class DummyObj {}`
-// or use `Object.create(null)`
 
 test('insertion of nodes gives back unique ids', t => {
   let table = new NodeDataScript({
@@ -19,8 +14,8 @@ test('insertion of nodes gives back unique ids', t => {
     keysIndexedObjectsTagSuffix: '-tag'
   });
   // insertion data
-  const obj1 = Object.create(null);
-  const obj2 = Object.create(null);
+  const obj1 = {};
+  const obj2 = new Date;
   const openLink = {
     blockOpen: obj1,
     keyOpen: 1
@@ -60,6 +55,8 @@ test('insertion of nodes gives back unique ids', t => {
   );
   // ensuring object identity after insertion
   t.is(node.objectKey, data.objectKey);
+  t.is(node.blockOpen, openLink.blockOpen);
+  t.is(node.blockClose, closeLink.blockClose);
   // insert the second node
   let id2;
   [node, table] = table.insertNode(
@@ -84,6 +81,9 @@ test('insertion of nodes gives back unique ids', t => {
   );
   // ensuring object identity after insertion
   t.is(node.objectKey, data.objectKey);
+  t.is(node.objectKey, data.objectKey);
+  t.is(node.blockOpen, openLink.blockOpen);
+  t.is(node.blockClose, closeLink.blockClose);
   // the ids inserted must be unique
   t.not(id1, id2);
 });
@@ -96,7 +96,7 @@ test('can search for inserted nodes', t => {
     keysIndexedObjectsTagSuffix: '-tag'
   });
   // we shall use obj1 for both node1.objectKey and node2.objectKey
-  const obj1 = Object.create(null);
+  const obj1 = new Number(1);
   // we shall use obj2 for both node1.blockOpen and node2.blockClose
   const obj2 = Object.create(null);
   // node1
@@ -112,7 +112,8 @@ test('can search for inserted nodes', t => {
   const data1 = {
     textKey: 'abc',
     objectKey: obj1,
-    unindexedKey: 10
+    unindexedKey: 10,
+    unindexedTextKey: 'hi'
   };
   // node2
   const level2 = 2;
@@ -127,7 +128,8 @@ test('can search for inserted nodes', t => {
   const data2 = {
     textKey: 'abcd',
     objectKey: obj1,
-    unindexedKey: 11
+    unindexedKey: 11,
+    unindexedTextKey: 'hi'
   };
   let node1;
   let node2;
@@ -143,12 +145,24 @@ test('can search for inserted nodes', t => {
     closeLink2,
     data2
   );
+  // testing object identity
+  t.is(node1.objectKey, data1.objectKey);
+  t.is(node1.blockOpen, openLink1.blockOpen);
+  t.is(node1.blockClose, closeLink1.blockClose);
+  t.is(node2.objectKey, data2.objectKey);
+  t.is(node2.blockOpen, openLink2.blockOpen);
+  t.is(node2.blockClose, closeLink2.blockClose);
   let results;
   // search by indexed objectKey
   results = table.searchNodes('objectKey', node1.objectKey);
   t.is(results.length, 2);
   // how do we know which one occurs first?
   // easy, due to sequential tagging
+  t.deepEqual(results[0], node1);
+  t.deepEqual(results[1], node2);
+  // search by unindexedTextKey
+  results = table.searchNodes('unindexedTextKey', data1.unindexedTextKey);
+  t.is(results.length, 2);
   t.deepEqual(results[0], node1);
   t.deepEqual(results[1], node2);
   // search by indexed node1.textKey
@@ -171,6 +185,14 @@ test('can search for inserted nodes', t => {
   results = table.searchNodes('blockOpen', node1.blockOpen);
   t.is(results.length, 1);
   t.deepEqual(results[0], node1);
+  // search by node1.blockClose
+  results = table.searchNodes('blockClose', closeLink1.blockClose);
+  t.is(results.length, 1);
+  t.deepEqual(results[0], node1);
+  // search by node2.blockOpen
+  results = table.searchNodes('blockOpen', openLink2.blockOpen);
+  t.is(results.length, 1);
+  t.deepEqual(results[0], node2);
   // search by node2.blockClose (even though it is used by node1.blockOpen)
   results = table.searchNodes('blockClose', node2.blockClose);
   t.is(results.length, 1);
@@ -185,9 +207,9 @@ test('deletion of nodes affects search', t => {
     keysIndexedObjectsTagSuffix: '-tag'
   });
   // we shall use obj1 for both node1.objectKey and node2.objectKey
-  const obj1 = Object.create(null);
+  const obj1 = {};
   // we shall use obj2 for both node1.blockOpen and node2.blockClose
-  const obj2 = Object.create(null);
+  const obj2 = {};
   // node1
   const level1 = 1;
   const openLink1 = {
@@ -195,7 +217,7 @@ test('deletion of nodes affects search', t => {
     keyOpen: 1
   };
   const closeLink1 = {
-    blockClose: {},
+    blockClose: undefined,
     keyClose: 2
   };
   const data1 = {
@@ -206,7 +228,7 @@ test('deletion of nodes affects search', t => {
   // node2
   const level2 = 2;
   const openLink2 = {
-    blockOpen: {},
+    blockOpen: null,
     keyOpen: 1
   };
   const closeLink2 = {
@@ -274,9 +296,9 @@ test('update performs a patch on existing nodes', t => {
     keysIndexedObjectsTagSuffix: '-tag'
   });
   // we shall use obj1 for both node1.objectKey and node2.objectKey
-  const obj1 = Object.create(null);
+  const obj1 = {};
   // we shall use obj2 for both node1.blockOpen and node2.blockClose
-  const obj2 = Object.create(null);
+  const obj2 = {};
   // node1
   const level1 = 1;
   const openLink1 = {
@@ -336,6 +358,8 @@ test('update performs a patch on existing nodes', t => {
       unindexedKey: 13
     }
   );
+  // check object identity between node1.objectKey and node1_.objectKey
+  t.is(node1.objectKey, node1_.objectKey);
   // update the node.objectKey
   let node2_;
   [node2_, table] = table.updateNode(
@@ -351,7 +375,10 @@ test('update performs a patch on existing nodes', t => {
       objectKey: obj2
     }
   );
-
+  // check object identity between node2.blockOpen and node2_.blockOpen
+  // and node2.blockClose and node2_.blockClose
+  t.is(node2.blockOpen, node2_.blockOpen);
+  t.is(node2.blockClose, node2_.blockClose);
   let results;
   // search with obj1 should only return node1_
   results = table.searchNodes('objectKey', obj1);
@@ -361,6 +388,7 @@ test('update performs a patch on existing nodes', t => {
   results = table.searchNodes('objectKey', obj2);
   t.is(results.length, 1);
   t.deepEqual(results[0], node2_);
+  t.is(results[0].objectKey, node2_.objectKey);
   // update node1_ back to objectKey: obj2
   [, table] = table.updateNode(
     node1_.id,
@@ -368,7 +396,6 @@ test('update performs a patch on existing nodes', t => {
       objectKey: obj2
     }
   );
-
   results = table.searchNodes('objectKey', obj2);
   t.is(results.length, 2);
   t.deepEqual(
@@ -381,10 +408,4 @@ test('update performs a patch on existing nodes', t => {
   t.is(results[0].objectKey, obj2);
   t.deepEqual(results[1], node2_);
   t.is(results[1].objectKey, obj2);
-
-
-
-
-
-
 });

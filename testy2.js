@@ -1,166 +1,67 @@
-import { CounterImmutable } from 'resource-counter';
-import { Map as MapI } from 'immutable';
+import ds from 'datascript';
 import Reference from 'reference-pointer';
 
-function tag (tagKeys, tagSuffix, tagCounter, tagMap, changed, object: {[string]: any}): void {
-  tagKeys.forEach((key) => {
-    if (object.hasOwnProperty(key)) {
-      const objectTagged = object[key];
-      const tagAndCount = tagMap.get(objectTagged);
-      let tag;
-      if (tagAndCount) {
-        tag = tagAndCount[0];
-        tagMap.set(objectTagged, [tag, tagAndCount[1] + 1])
-      } else {
-        tag = tagCounter.allocate();
-        tagMap.set(objectTagged, [tag, 1]);
-      }
-      object[key + tagSuffix] = tag;
-      changed.set(true);
-    }
-  });
-}
+const db = ds.empty_db();
 
-function untag (tagKeys, tagSuffix, tagCounter, tagMap, changed, object): void {
-  tagKeys.forEach((key) => {
-    if (object.hasOwnProperty(key)) {
-      const objectTagged = object[key];
-      const tagAndCount = tagMap.get(objectTagged);
-      if (tagAndCount) {
-        if ((tagAndCount[1] - 1) < 1) {
-          tagCounter.deallocate(tagAndCount[0]);
-          tagMap.delete(objectTagged);
-        } else {
-          tagMap.set(objectTagged, [tagAndCount[0], tagAndCount[1] - 1]);
-        }
-      }
-      delete object[key + tagSuffix];
-      changed.set(true);
-    }
-  });
-}
+class DummyObj {}
 
-function strip (tagKeys, tagSuffix, object) {
-  tagKeys.forEach((key) => {
-    delete object[key + tagSuffix];
-  });
-}
-
-class Tagger {
-
-  _tagKeys: Set<string>;
-  _tagSuffix: string;
-  _tagCounter: CounterImmutable;
-  _tagMap: MapI<Object, [number, number]>;
-
-  constructor (
-    tagKeys: Set<string>,
-    tagSuffix: string,
-    tagCounter: CounterImmutable = new CounterImmutable,
-    tagMap: MapI<Object, [number, number]> = MapI()
-  ) {
-    this._tagKeys = tagKeys;
-    this._tagSuffix = tagSuffix;
-    this._tagCounter = tagCounter;
-    this._tagMap = tagMap;
-  }
-
-  tag (object: {[string]: any}): Tagger {
-    const changed = new Reference(false);
-    let tagCounter, tagMap;
-    tagCounter = this._tagCounter.transaction((counter) => {
-      tagMap = this._tagMap.withMutations((map) => {
-        tag(this._tagKeys, this._tagSuffix, counter, map, changed, object);
-      });
-    });
-    if (changed.get()) {
-      return new Tagger(
-        this._tagKeys,
-        this._tagSuffix,
-        tagCounter,
-        tagMap
-      );
-    } else {
-      return this;
-    }
-  }
-
-  untag (object: {[string]: any}): Tagger {
-    const changed = new Reference(false);
-    let tagCounter, tagMap;
-    tagCounter = this._tagCounter.transaction((counter) => {
-      tagMap = this._tagMap.withMutations((map) => {
-        untag(this._tagKeys, this._tagSuffix, counter, map, changed, object);
-      });
-    });
-    if (changed.get()) {
-      return new Tagger(
-        this._tagKeys,
-        this._tagSuffix,
-        tagCounter,
-        tagMap
-      );
-    } else {
-      return this;
-    }
-  }
-
-  strip (object: {[string]: any}): void {
-    strip(this._tagKeys, this._tagSuffix, object);
-  }
-
-  transaction (callback) {
-    let changed = new Reference(false);
-    let tagCounter, tagMap;
-    tagCounter = this._tagCounter.transaction((counter) => {
-      tagMap = this._tagMap.withMutations((map) => {
-        const taggerTransaction = {
-          tag: (object) => tag(
-            this._tagKeys,
-            this._tagSuffix,
-            counter,
-            map,
-            changed,
-            object
-          ),
-          untag: (object) => untag(
-            this._tagKeys,
-            this._tagSuffix,
-            counter,
-            map,
-            changed,
-            object
-          ),
-          strip: (object) => strip(
-            this._tagKeys,
-            this._tagSuffix,
-            object
-          )
-        };
-        callback(taggerTransaction);
-      });
-    });
-    if (changed.get()) {
-      return new Tagger(this._tagKeys, this._tagSuffix, tagCounter, tagMap);
-    } else {
-      return this;
-    }
-  }
-
-}
-
-
-let t = new Tagger(new Set(['k', 'l', 'm', 'n']), '-tag');
-
-let obj = {};
-
-let object = {
-  k: {},
-  l: {},
-  m: obj,
-  n: obj
+const number = new Number(1);
+const date = new Date;
+const literalnestedobj = {};
+const literalobj = {
+  literalnestedobj: literalnestedobj,
+  number: number,
+  date: date
 };
+const referenceliteral = new Reference(literalobj);
+const dummyobj = new DummyObj;
+const nullobject = Object.create(null);
+const nully = new Reference(null);
+const uundefined = new Reference(undefined);
 
-t.tag(object);
+const db2 = ds.db_with(db, [{
+  ':db/id': -1,
+  'number': number,
+  'date': date,
+  'literalobj': literalobj,
+  'referenceliteral': referenceliteral,
+  'dummyobj': dummyobj,
+  'nullobject': nullobject,
+  'nully': nully,
+  'uundefined': uundefined
+}]);
 
-console.log(object);
+const pulled = ds.pull(db2, '[*]', 1);
+
+console.log(pulled);
+/*
+  { referenceliteral:
+  Reference {
+  _value:
+  { literalnestedobj: {},
+  number: [Number: 1],
+  date: 2018-02-11T05:42:41.582Z } },
+  nullobject: {},
+  uundefined: Reference { _value: undefined },
+  nully: Reference { _value: null },
+  literalobj:
+  { literalnestedobj: {},
+  number: [Number: 1],
+  date: 2018-02-11T05:42:41.582Z },
+  number: [Number: 1],
+  dummyobj: DummyObj {},
+  ':db/id': 1,
+  date: 2018-02-11T05:42:41.582Z }
+*/
+
+console.log(pulled.number === number);                                // true
+console.log(pulled.date === date);                                    // true
+console.log(pulled.literalobj === literalobj);                        // false
+console.log(pulled.literalobj.literalnestedobj === literalnestedobj); // false
+console.log(pulled.literalobj.number === number);                     // true
+console.log(pulled.literalobj.date === date);                         // true
+console.log(pulled.referenceliteral === referenceliteral);            // true
+console.log(pulled.dummyobj === dummyobj);                            // true
+console.log(pulled.nullobject === nullobject);                        // true
+console.log(pulled.nully === nully);                                  // true
+console.log(pulled.uundefined === uundefined);                        // true
