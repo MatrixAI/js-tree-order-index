@@ -933,3 +933,11 @@ Ok so apparently an issue is that datomic doesn't really have a "transactional" 
 But for other things you'll need to pull out the db from the conn and then use it. The conn itself keeps track of previous db and new db anyway though.
 
 Does it work like pull though? Does it really give us the necessary objects. I will check with a full test.
+
+---
+
+Ok so the NodeDataScript now works, and it works immutably along with the necessary transactions. Great. Also this means our cursor maintains a link to the nodetable and the tree as it traverses. We use the cursor as a sort of passed in type for OrderIndexI.
+
+And the OrderEntry is still just `id: number, status: boolean` to represent opening and closing. But this also means we can just pass things like our gaplinks, which now has to be specified in a common way as well.
+
+This is all done in the OrderIndexedTree
