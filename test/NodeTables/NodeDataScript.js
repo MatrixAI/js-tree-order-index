@@ -446,8 +446,12 @@ test('transaction bundles up modifications', t => {
   let node1, node2, node3;
   table = table.transaction((tt) => {
     node1 = tt.insertNode(1, openLink, closeLink, data, (id) => { id1 = id; });
-    node2 = tt.insertNode(2, openLink, closeLink, data, (id) => { id2 = id; });
-    node3 = tt.insertNode(3, openLink, closeLink, data, (id) => { id3 = id; });
+    [node2, node3] = tt.loadNodes(
+      [
+        [2, openLink, closeLink, data, (id) => { id2 = id; }],
+        [3, openLink, closeLink, data, (id) => { id3 = id; }]
+      ]
+    );
     t.is(node1.id, id1);
     t.is(node2.id, id2);
     t.is(node3.id, id3);
@@ -519,4 +523,67 @@ test('transaction bundles up modifications', t => {
   const results = table.getNodes();
   t.is(results.length, 1);
   t.deepEqual(results[0], node3);
+});
+
+test('bulk loading', t => {
+  let table = new NodeDataScript({
+    new: true,
+    keysIndexed: new Set(['textKey']),
+    keysIndexedObjects: new Set(['objectKey', 'blockOpen', 'blockClose']),
+    keysIndexedObjectsTagSuffix: '-tag'
+  });
+  const obj1 = {};
+  const obj2 = {};
+  const openLink = {
+    blockOpen: obj1,
+    keyOpen: 1
+  };
+  const closeLink = {
+    blockClose: obj1,
+    keyClose: 2
+  };
+  const data = {
+    textKey: 'abc',
+    objectKey: obj2,
+    unindexedKey: 10
+  };
+  let insertedNodes;
+  let id2;
+  [insertedNodes, table] = table.loadNodes([
+    [1, openLink, closeLink, data],
+    [2, openLink, closeLink, data, (id) => { id2 = id; }],
+    [3, openLink, closeLink, data]
+  ]);
+  t.is(id2, insertedNodes[1].id);
+  t.is(insertedNodes.length, 3);
+  t.deepEqual(
+    insertedNodes[0],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 1,
+      id: 1
+    }
+  );
+  t.deepEqual(
+    insertedNodes[1],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 2,
+      id: 2
+    }
+  );
+  t.deepEqual(
+    insertedNodes[2],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 3,
+      id: 3
+    }
+  );
 });
