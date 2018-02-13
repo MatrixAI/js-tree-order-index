@@ -927,3 +927,9 @@ https://github.com/lukasbuenger/immutable-treeutils
 ---
 
 Abstracting parent pointers
+
+Ok so apparently an issue is that datomic doesn't really have a "transactional" with mutations concept, instead every transaction is a unit request. But so really I'm just creating a new DB anyway. And I can't even pull stuff out using the conn, without first getting the DB from the conn. And the report iteslf tells tells us what it did inside it's tx_data. It also tells us before and after. So within the deleteNode function, I should be able to instead just use check the tx data for anything, and then if so, strip that and return it.
+
+But for other things you'll need to pull out the db from the conn and then use it. The conn itself keeps track of previous db and new db anyway though.
+
+Does it work like pull though? Does it really give us the necessary objects. I will check with a full test.
