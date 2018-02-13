@@ -420,6 +420,69 @@ test('update performs a patch on existing nodes', t => {
   t.is(tableNoChange, table);
 });
 
+test('bulk loading', t => {
+  let table = new NodeDataScript({
+    new: true,
+    keysIndexed: new Set(['textKey']),
+    keysIndexedObjects: new Set(['objectKey', 'blockOpen', 'blockClose']),
+    keysIndexedObjectsTagSuffix: '-tag'
+  });
+  const obj1 = {};
+  const obj2 = {};
+  const openLink = {
+    blockOpen: obj1,
+    keyOpen: 1
+  };
+  const closeLink = {
+    blockClose: obj1,
+    keyClose: 2
+  };
+  const data = {
+    textKey: 'abc',
+    objectKey: obj2,
+    unindexedKey: 10
+  };
+  let insertedNodes;
+  let id2;
+  [insertedNodes, table] = table.loadNodes([
+    [1, openLink, closeLink, data],
+    [2, openLink, closeLink, data, (id) => { id2 = id; }],
+    [3, openLink, closeLink, data]
+  ]);
+  t.is(id2, insertedNodes[1].id);
+  t.is(insertedNodes.length, 3);
+  t.deepEqual(
+    insertedNodes[0],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 1,
+      id: 1
+    }
+  );
+  t.deepEqual(
+    insertedNodes[1],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 2,
+      id: 2
+    }
+  );
+  t.deepEqual(
+    insertedNodes[2],
+    {
+      ...openLink,
+      ...closeLink,
+      ...data,
+      level: 3,
+      id: 3
+    }
+  );
+});
+
 test('transaction bundles up modifications', t => {
   let table = new NodeDataScript({
     new: true,
@@ -523,67 +586,4 @@ test('transaction bundles up modifications', t => {
   const results = table.getNodes();
   t.is(results.length, 1);
   t.deepEqual(results[0], node3);
-});
-
-test('bulk loading', t => {
-  let table = new NodeDataScript({
-    new: true,
-    keysIndexed: new Set(['textKey']),
-    keysIndexedObjects: new Set(['objectKey', 'blockOpen', 'blockClose']),
-    keysIndexedObjectsTagSuffix: '-tag'
-  });
-  const obj1 = {};
-  const obj2 = {};
-  const openLink = {
-    blockOpen: obj1,
-    keyOpen: 1
-  };
-  const closeLink = {
-    blockClose: obj1,
-    keyClose: 2
-  };
-  const data = {
-    textKey: 'abc',
-    objectKey: obj2,
-    unindexedKey: 10
-  };
-  let insertedNodes;
-  let id2;
-  [insertedNodes, table] = table.loadNodes([
-    [1, openLink, closeLink, data],
-    [2, openLink, closeLink, data, (id) => { id2 = id; }],
-    [3, openLink, closeLink, data]
-  ]);
-  t.is(id2, insertedNodes[1].id);
-  t.is(insertedNodes.length, 3);
-  t.deepEqual(
-    insertedNodes[0],
-    {
-      ...openLink,
-      ...closeLink,
-      ...data,
-      level: 1,
-      id: 1
-    }
-  );
-  t.deepEqual(
-    insertedNodes[1],
-    {
-      ...openLink,
-      ...closeLink,
-      ...data,
-      level: 2,
-      id: 2
-    }
-  );
-  t.deepEqual(
-    insertedNodes[2],
-    {
-      ...openLink,
-      ...closeLink,
-      ...data,
-      level: 3,
-      id: 3
-    }
-  );
 });
