@@ -419,3 +419,104 @@ test('update performs a patch on existing nodes', t => {
   t.is(nodeNoChange.objectKey, node2_.objectKey);
   t.is(tableNoChange, table);
 });
+
+test('transaction bundles up modifications', t => {
+  let table = new NodeDataScript({
+    new: true,
+    keysIndexed: new Set(['textKey']),
+    keysIndexedObjects: new Set(['objectKey', 'blockOpen', 'blockClose']),
+    keysIndexedObjectsTagSuffix: '-tag'
+  });
+  const obj1 = {};
+  const obj2 = {};
+  const openLink = {
+    blockOpen: obj1,
+    keyOpen: 1
+  };
+  const closeLink = {
+    blockClose: obj1,
+    keyClose: 2
+  };
+  const data = {
+    textKey: 'abc',
+    objectKey: obj2,
+    unindexedKey: 10
+  };
+  let id1, id2, id3;
+  let node1, node2, node3;
+  table = table.transaction((tt) => {
+    node1 = tt.insertNode(1, openLink, closeLink, data, (id) => { id1 = id; });
+    node2 = tt.insertNode(2, openLink, closeLink, data, (id) => { id2 = id; });
+    node3 = tt.insertNode(3, openLink, closeLink, data, (id) => { id3 = id; });
+    t.is(node1.id, id1);
+    t.is(node2.id, id2);
+    t.is(node3.id, id3);
+    t.true(node1.id < node2.id);
+    t.true(node2.id < node3.id);
+    t.deepEqual(
+      node1,
+      {
+        ...openLink,
+        ...closeLink,
+        ...data,
+        id: id1,
+        level: 1
+      }
+    );
+    t.deepEqual(
+      node2,
+      {
+        ...openLink,
+        ...closeLink,
+        ...data,
+        id: id2,
+        level: 2
+      }
+    );
+    t.deepEqual(
+      node3,
+      {
+        ...openLink,
+        ...closeLink,
+        ...data,
+        id: id3,
+        level: 3
+      }
+    );
+    let results;
+    results = tt.searchNodes('textKey', 'abc');
+    t.is(results.length, 3);
+    t.deepEqual(results[0], node1);
+    t.deepEqual(results[1], node2);
+    t.deepEqual(results[2], node3);
+    results = tt.searchNodes('objectKey', obj2);
+    t.is(results.length, 3);
+    t.deepEqual(results[0], node1);
+    t.deepEqual(results[1], node2);
+    t.deepEqual(results[2], node3);
+    results = tt.searchNodes('level', 1);
+    t.is(results.length, 1);
+    t.deepEqual(results[0], node1);
+    let node2_ = tt.deleteNode(node2.id);
+    t.deepEqual(node2_, node2);
+    results = tt.searchNodes('objectKey', obj2);
+    t.is(results.length, 2);
+    t.deepEqual(results[0], node1);
+    t.deepEqual(results[1], node3);
+    tt.updateNode(node1.id, {
+      objectKey: obj1
+    });
+    results = tt.searchNodes('objectKey', obj2);
+    t.is(results.length, 1);
+    t.deepEqual(results[0], node3);
+    results = tt.searchNodes('objectKey', obj2);
+    t.is(results.length, 1);
+    t.deepEqual(results[0], node3);
+    results = tt.getNodes();
+    t.is(results.length, 2);
+    tt.deleteNode(node1.id);
+  });
+  const results = table.getNodes();
+  t.is(results.length, 1);
+  t.deepEqual(results[0], node3);
+});
