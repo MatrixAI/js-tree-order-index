@@ -941,3 +941,102 @@ Ok so the NodeDataScript now works, and it works immutably along with the necess
 And the OrderEntry is still just `id: number, status: boolean` to represent opening and closing. But this also means we can just pass things like our gaplinks, which now has to be specified in a common way as well.
 
 This is all done in the OrderIndexedTree
+
+---
+
+When settling commits, flatten to where you have NodeDataScript written properly. Then the next step is where the rest of the order index tree is created. Otherwise you'll have 1 or 2 commits at the end.
+
+---
+
+For MVCC we would need to have a set of conflicting operations and non-conflicting ones so that writes can be serialised into the same tree.
+
+Push block level deltas down the tree, and this seems to allow the ability to mark if blocks is clean.
+
+---
+
+```
+    // we need to first insert into it with a callback
+    // that means we first insert into the tree
+    // the tree then passes a callback that is passed into the nodetable
+    // also the level we insert it at depends on the situation? right?
+    // if position is null, we are inserting at root
+    // that means the level becomes 0
+    // leaf insertions insert at opening5 closing5 which is a leaf
+    // but when we insert as root
+    // that is inserting around the entire one
+    // doesn't that mean everything has their level increased?
+    // we don't want to have to increase the levels of every other node in the node table
+    // but instead if we could use the blocklevels somehow?
+    // wait when you do leaf insertion, you can derive the level because you know the node it is inserting under, in which case the level you assign it within the node table is just the level of the parent node + 1, so you take whatever is the parent level, and add 1 to it
+    // but wait, this also depends on where the parent entries are
+    // but where your parent node is installed is different from where you are installed
+    // and where you are installed depends on some things
+    // like you can calc you parent level by walking up the tree
+    // then you know that your level needs to be parent level + 1
+    // then you need to calculate what your level would be depending on which block you are in and the difference would be what you put into your node table!
+
+    // so... that means inserting at the root position would mean you need to take the level of your child and minus 1, the problem is that level should be 0 for the root
+    // so this is easy
+    // get the root block of the BOTree, make that +1 to it
+    // now where your root opening entry is
+    // we don't change that, but we need to make sure it is -1
+
+
+    // leaf insertion can be special cased
+    // it means finding correct empty slots to insert into
+    // it means split in the middle in the block you want to insert in
+    // this may mean splitting/splicing for the parent blocks
+    // root insertion is 2 * cost of the leaf insertion
+    // this is becuase you are inserting on the far left
+    // and then inserting on the far right
+
+    // you may then perform a leaf merge operation for both for shrinking the tree?
+    // note that finding the correct empty slots is bit difficult
+
+    // [O1, O2, O3, O4]
+    // and you wanted to insert between O1 and O2
+
+    // we could do this 2 ways
+    // either we split exactly between O1 and O2 (like subtree relocation)
+    // and put our O7 C7 right in the middle as a new block in itself
+    // and adjust parents until it fits, and then do a rebalance merge operation
+    // this results in merging operations which may be unnecessary
+
+    // alternatively
+    // we could split it right in the middle with
+    // [O1, O2, _, _] split [O3, O4, _, _]
+    // then splice O7 C7 between O1 and O2 since there is now space
+    // [O1, O7, C7, O2] [O3, O4, _, _]
+    // in this case we must make sure that our middle splits must always produce enough free space to allow us to insert our O7 and C7
+    // so 2 * 2 = 4, so minimum block size of 4
+
+    // note this can be sped up by interleaving the splice into the split operation, so that when we split, we are making a copy (and when that copy is made, the correct change is applied during that copy) such that O7 C7 gets put into the right place
+
+    // the advantage of this is that no merging is no required, unlike reusing the subtree logic
+
+    // root entries start on the far left and far right
+    // they are within their own blocks
+    // they always start with level -1 in the nodetable
+    // we build out blocks on the left side and right side
+    // and we want to insert these new sides to the root block
+    // if there is space for 2 pointers, +1 to the level of the root block
+    // if there is no space for the 2 pointers, split the root block
+    // create a new root, and with +1 to its level
+    // and it is done!
+
+    // leaf entry requires finding the correct slot
+    // do the mid split as well
+    // interleave the splice operation into the split
+    // propagate the splitting and splicing into parent blocksS
+    // the level of the child needs to be
+```
+
+If we have a generic Node type. We are saying that it is possible to go from Node to the internal link. Since we don't know what the property is structured (and hence its keys), we need to use a generic function. This function can be carried as part of the node?
+
+We need to change how our Node type is setup.
+
+How would a generic function be built. It would mean whatever that implements the type needs to take the linkOpen, and
+
+Wait but we also return new nodes. So this means our creation of the node would require a special constructor?
+
+A NodeConstructor function: `(a, b, c, d) => Node<a, b, c, d>`. Along with the necessary functions. Note that this means we can mutate the propery if necessary.
