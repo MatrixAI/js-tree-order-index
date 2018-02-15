@@ -1040,3 +1040,45 @@ How would a generic function be built. It would mean whatever that implements th
 Wait but we also return new nodes. So this means our creation of the node would require a special constructor?
 
 A NodeConstructor function: `(a, b, c, d) => Node<a, b, c, d>`. Along with the necessary functions. Note that this means we can mutate the propery if necessary.
+
+```
+type NodeId = number;
+type NodeLevel = number;
+
+type Node<linkOpen: Object, linkClose: Object, data: Object> =
+  {
+    id: NodeId,
+    level: NodeLevel,
+    getOpenLink(): linkOpen,
+    getCloseLink(): linkClose,
+    getData(): data
+  } &
+  linkOpen &
+  linkClose &
+  data;
+
+let x: Node<{}, { a: string }, {}> = {
+  id: 1,
+  a: 'abc',
+  level: 2,
+  getOpenLink: () => ({}),
+  getCloseLink: () => ({ a: 'abc' }),
+  getData: () => ({})
+};
+
+// so the above works
+// we can ask for functions that implement the get the thing
+// but to really implement it, we would need to class it
+// and we cannot do this with interfaces for some reason
+// unless we define multiple interfaces that is the & or something
+```
+
+---
+
+So let's just use GapLink.js directly and fix what they are.
+
+Note that alot of things inside the BOTree requires special casing for the GapLink I think.
+
+The biggest one would be the conversion of the link to the cursor. To do this, the BOTree really knows what the cursor points to. That is the the link itself to a BoTree is specific to the system, you need to be able to say that the gaplink points to the bock in the tree, and then the gapkey in the block. So that means GapLink is not really something outside of the tree. It's part of the tree. So we know then that the nodetable doesn't know and doesn't care, so we should bring the gaplink into the BOTree.
+
+Note that a JSON object has keys. A standard tree in this encoding doesn't have keys. Instead they will have child nodes that represent the keys, and the keys themselves would map to another child node that is their value. If that value is another object, then it is another object! Like an array or something else. Each node can have a type marking it, saying what kind of object it is. In this case a key is its own type. So arrays would have child nodes marked with integer keys. This is necessary to represent JS arrays which are really actually sparse semantics. It also depends on what we consider to be the tree, only objects or arrays are included? There should be ways to actually store the arrays as primitives rather than as tree objects. In that case rather than using a normal Array... we can spcial case them as a sort of special object, in which case we will not consider it.
