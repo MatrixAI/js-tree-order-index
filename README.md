@@ -1087,7 +1087,7 @@ Note that a JSON object has keys. A standard tree in this encoding doesn't have 
 
 If you use an immutable table to represent the BOTree, you don't need to do path copying. Because if you just change the node being changed, and make that change to the treetable, the parent "pointers" are still the same, the ids haven't changed at all. So they automatically point to the new changed block.
 
-Tree splits still requires changes up to a parent that has space however.
+Tree splits still requires changes up to a parent that has space however. Which means replacing the node that is split, and the parent node that is split and so on until you reach a parent which doesn't require splitting. All those rows will need to be immutably replaced in the tree table.
 
 So basically using the tree table was the best strategy!
 
@@ -1171,3 +1171,26 @@ This would mean we consider arrays and objects to be the same. However this mean
  1  2  3     1      2
 ```
 The problem here is you see that objects are given their own representation, we just know that obj is a key that leads us to another thing which has keys. And in a way the access makes sense: `root['obj']['first']`. But that's because from a query side it doesn't look different. But if we want to differentiate arrays from objects, we would need to make sure that the `arr` or `obj` node contains additional information to say that this in fact an array or object or some opaque object.
+
+---
+
+
+    // note that we have to make sure that the table is setup immutably
+    // so when we are updating here
+    // we are doing so in a batch update to the whole structure
+    // we only relabel when we are doing updates to the tree
+    // oh does that mean our interpolation search shouldn't cause an update
+    // cause it won't be propagated to our tree?
+    // wait... this doesn't have to be done immutably
+    // we can just fetch each linkOpen object, and change their gapKey
+    // it is not needed to keep the table immutable for this
+    // this change can be kept silent
+    // because it will apply to all tables with the same table
+    // BUT WAIT. no it won't work
+    // that will cause all older tables to fail
+    // cause their keys are no longer what's kept in the tree anyway
+    // ok so we can only perform in an update in the case
+    // right so what happens is that during an insertion
+    // we get access to the node table
+    // and this performs an immutable update
+    // and returns a new node table with newly inserted nodes and nodes that have their gapkey changed
