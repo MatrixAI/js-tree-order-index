@@ -1090,3 +1090,84 @@ If you use an immutable table to represent the BOTree, you don't need to do path
 Tree splits still requires changes up to a parent that has space however.
 
 So basically using the tree table was the best strategy!
+
+
+---
+
+After doing this with ArrayFixedDense, you should try an implementation with a linked list instead, which should have worse cache behaviour, probably won't work on disk, but since this is in-memory, it would be good to compare performance and space usage.
+
+Note our entire API is setup as (value, position) instead of the standard array (position, value). Why? I think it should be (position, value). Because there are some functions where you just set the value. Hashmaps use (position, value), arrays use (position, value). So that's basically it. Some functions you don't need position, it becomes a default value.
+
+Cause the null position indicates the root position!
+
+```
+// inserts it as root
+root = treeIndex.insertNode(null, {...});
+// inserts it as the leftmost child of root
+treeIndex.insertNode([root, 0], {...});
+```
+
+How do you store JSON? Enumerate the types.
+For an array, we shall consider it a sparse array, and every index is then a separate child node (ordered by insertion order). And then the value is then what that value is. Should we be storing undefined? Or unset items, it depends. It seems like we would have to ask the user to supply some directives for this, or implement their own parser of JSON with the necessary primitives needed to build it.
+
+For objects, keys will become child nodes, and values will be child nodes of the keys.
+
+DAGs are going to be indexed strangely, in that the tree will expand them, and there's no relationship between a child and another child.
+
+At some point you may need a node to refer to the same thing, in that case we don't expand it any further and leave it there.
+
+Consider:
+
+```
+{
+  arr: [1,2,3],
+}
+```
+
+```
+  root
+    |
+   arr
+    |
+  array
+  / | \
+ 0  1  2
+ |  |  |
+ 1  2  3
+```
+
+The fact that it is an array is recorded directly. This way one can understand that it isn't just another object with keys 0, 1, 2. On the other hand, we could expand directly:
+
+```
+  root
+    |
+   arr
+  / | \
+ 0  1  2
+ |  |  |
+ 1  2  3
+```
+
+This would mean we consider arrays and objects to be the same. However this means we don't have an isomorphic representation, since we no longer know if arr is actually an array, or an object, and when we reconstruct, we won't know.
+
+
+```
+{
+  arr: [1,2,3],
+  obj: {
+    first: 1,
+    second: 2
+  }
+}
+```
+
+```
+  root
+    |       \
+   arr      obj
+  / | \      |      \
+ 0  1  2    first  second
+ |  |  |     |      |
+ 1  2  3     1      2
+```
+The problem here is you see that objects are given their own representation, we just know that obj is a key that leads us to another thing which has keys. And in a way the access makes sense: `root['obj']['first']`. But that's because from a query side it doesn't look different. But if we want to differentiate arrays from objects, we would need to make sure that the `arr` or `obj` node contains additional information to say that this in fact an array or object or some opaque object.
