@@ -1217,3 +1217,19 @@ But if these updates to the node table is triggered from within the botree, how 
 Ok so the main idea is that even for queries, you create a transactional context and all the functions can refer to that while mutating the tree. We only refresh for individual external functions?
 
 The OrderIndexedTree creates transactional contexts for its top-level queries, and these gets pushed down to the internal functions in BOTree. Which uses the transactional context in order to perform the job. However this does mean queries may not in fact mutate anything. The point is that if multiple queries perform mutations on the tree, this is all hidden, it's hidden mutation. And eventually it will reach a steady state, where there are no mutations necessary for the queries. So I think this is a valid tradeoff for preserving relabelling under interpolation search.
+
+---
+
+Growth happens due to splits that then create new parents. Shrinking then happens from root downwards. Every time you are the root, and you are left with only 1 pointer. You can shrink and pass the rootId downwards and delete yourself from the tree table.
+
+The main idea is that eventually you would shrink down the last `Leaf` node.
+
+Leafs only shrink due to merging. Merging happens whenever there are "underfull" blocks. When a merge occurs, that's when it may trigger a root shrink. This only occurs for the parent `Node` block that checks that its id is the `this._rootId`. Only then do you start shrinking. Note you would never shrink on a `Leaf` block.
+
+When a root shrink occurs, it must push down its level to its child before deleting itself.
+
+Note that when merging occurs, the parent must discard the child ID, to do this, you must find the child ID and discard it. However the child IDs are held in simple arrays (actually ArrayFixedDense left-dense), this means we need to perform a linear search. To make this faster, we could index the individual child ids, into a sort of map. That is a map is an index of the array itself by storing the child ids. And when you want to delete one or find one, you just ask the map first, which gives you the position index, and then you delete it from the array and the map. However this adds a lot of overhead, and our arrays are still pretty small size 64ish even up to 100/200 linear search is still pretty fast. Mixed block sizes can also work nicely. But for now we're not dealing with that complexlity.
+
+Insertion of root where the leftId and rightId are the same means we are inserting into the same block. All we do is look for the existing root and our level will be the existing root leve - 1. Then on the root block, it will have its level + 1. No backlinks need to change here, we have enough space. However the treeTable gets updated with a new root block and a new leaf block. Note that if the root an dleaf block are the same...
+
+Remember expansion starts from bottom left. You split when growing, and potentially create parents. You then merge back to the left and then potentially shrink from the top.
