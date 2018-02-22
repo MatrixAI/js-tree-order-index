@@ -1194,3 +1194,26 @@ The problem here is you see that objects are given their own representation, we 
     // we get access to the node table
     // and this performs an immutable update
     // and returns a new node table with newly inserted nodes and nodes that have their gapkey changed
+
+---
+
+  // so we are assuming any changes must occur within a transaction then
+  // every operation needs to occur within a specific transaction context
+  // we are pushing that context into the system
+  // sometimes we are
+  // note that the need to do this means we when we query
+  // we cannot do relabelling anymore while querying
+  // since that involves changes to the node table
+  // if only we could turn it off and apply it to the same node table
+  // but that circumvents the data structures
+  // we are not going to do that
+
+So we cannot perform relabelling when we do the interpolation search and find that we are taking too long to search for it. One issue is that when we caret in, we would only perform it if we find we cannot caret in even when there's a position available.
+
+Unless the reference to OrderIndexedTree actually contains a conn reference to nodetable, or a nodetable that can change. So then queries can chaneg the internal node table since it doesn't affect any of the other operations. Regardless the system still requires the usage of a transactional context.
+
+But if these updates to the node table is triggered from within the botree, how do we make sure that we are changing the nodetable reference!? We just do, since it's a harmless mutation!
+
+Ok so the main idea is that even for queries, you create a transactional context and all the functions can refer to that while mutating the tree. We only refresh for individual external functions?
+
+The OrderIndexedTree creates transactional contexts for its top-level queries, and these gets pushed down to the internal functions in BOTree. Which uses the transactional context in order to perform the job. However this does mean queries may not in fact mutate anything. The point is that if multiple queries perform mutations on the tree, this is all hidden, it's hidden mutation. And eventually it will reach a steady state, where there are no mutations necessary for the queries. So I think this is a valid tradeoff for preserving relabelling under interpolation search.
