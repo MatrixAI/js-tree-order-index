@@ -1233,3 +1233,7 @@ Note that when merging occurs, the parent must discard the child ID, to do this,
 Insertion of root where the leftId and rightId are the same means we are inserting into the same block. All we do is look for the existing root and our level will be the existing root leve - 1. Then on the root block, it will have its level + 1. No backlinks need to change here, we have enough space. However the treeTable gets updated with a new root block and a new leaf block. Note that if the root an dleaf block are the same...
 
 Remember expansion starts from bottom left. You split when growing, and potentially create parents. You then merge back to the left and then potentially shrink from the top.
+
+---
+
+It appears that BOTree needs to call NodeTable alot, so we might as well just push that functionality into the BOTree itself. It has to query it and sometimes update it (relabelling gap keys) and in the case of splits and merges, updating the backlinks.
