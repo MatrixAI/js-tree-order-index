@@ -1270,3 +1270,5 @@ Insert at root:
       // it's class properties transform!
       // which we already have
 ```
+
+All dynamic error checks can be removed after development. They are actually debug time assertions. They are basically a dynamic assertion check that isn't actually needed in main operations once everything works. Apparently we should be using `console.assert`, and it just doesn't report anything under normal operations.
