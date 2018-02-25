@@ -1237,3 +1237,36 @@ Remember expansion starts from bottom left. You split when growing, and potentia
 ---
 
 It appears that BOTree needs to call NodeTable alot, so we might as well just push that functionality into the BOTree itself. It has to query it and sometimes update it (relabelling gap keys) and in the case of splits and merges, updating the backlinks.
+
+Insertion cases:
+
+Insert at root:
+
+```
+      // we are talking about just 1 block
+      // we need to caret in 2 entries
+      // this may involve a split
+      // if so that means a parent gets created
+      // so the data structure itself has support for the split
+      // HOWEVER
+      // note that the splitting and creation of parents
+      // and moving of the entries
+      // requires that you have access to the node table
+      // to update pointers and shit
+      // so how to model that best?
+      // we pass it into the classes that need it
+      // so that's basically the Leaf class
+      // so we just pass it in for when it's dealing with itself
+      // but this just means the BOTree works like that
+      // it's also that when we pass the update link function specifically that limits the capabilities
+      // but do we need to bind the method?
+      // yes you need to do this._updateLink.bind(this)
+      // when we pass it to the internal function!
+      // OH... we can also just use an arrow function directly
+      // _updateLink = (...) => {...}
+      // then you can just pass the this._updateLink
+      // then it is done
+      // what babel feature supports this?
+      // it's class properties transform!
+      // which we already have
+```
