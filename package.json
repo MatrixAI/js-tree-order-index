@@ -38,11 +38,11 @@
     "babel-preset-env": "^1.6.1",
     "babel-preset-flow": "^6.23.0",
     "babel-register": "^6.26.0",
-    "documentation": "^5.3.5",
-    "rollup": "^0.55.3",
+    "documentation": "^5.5.0",
+    "rollup": "^0.55.5",
     "rollup-plugin-babel": "^3.0.3",
-    "rollup-plugin-commonjs": "^8.3.0",
-    "rollup-plugin-node-resolve": "^3.0.2"
+    "rollup-plugin-commonjs": "^8.4.1",
+    "rollup-plugin-node-resolve": "^3.2.0"
   },
   "dependencies": {
     "array-fixed": "^0.4.0",
@@ -52,6 +52,6 @@
     "immutable": "^3.8.2",
     "object-tagger": "^0.4.1",
     "reference-pointer": "0.0.2",
-    "resource-counter": "^1.2.2"
+    "resource-counter": "^1.2.3"
   }
 }
