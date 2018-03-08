@@ -14,3 +14,7 @@ const boTree = new BOTree({
 });
 
 console.log(boTree);
+
+boTree.insertRoot({
+  name: 'Hi I am Root!'
+});
