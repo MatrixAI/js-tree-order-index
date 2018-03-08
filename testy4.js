@@ -13,8 +13,19 @@ const boTree = new BOTree({
   nodeTable: nodeTable
 });
 
-console.log(boTree);
 
-boTree.insertRoot({
+// this appears to do it twice
+// why is the length and count wrong?
+
+const [node, tree] = boTree.insertRoot({
   name: 'Hi I am Root!'
 });
+
+console.log(node);
+console.log(tree);
+
+const [node2, tree2] = tree.insertRoot({
+  name: 'I am the new root!'
+});
+
+console.log(node2, tree2);
