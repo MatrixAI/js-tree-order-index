@@ -25,18 +25,43 @@ const [node2, tree2] = tree.insertRoot({
   name: 'I am the new root!'
 });
 
-// the parentId is not set for the left block
-// why is that?
+const [node3, tree3] = tree2.insertRoot({
+  name: 'NAH I AM!'
+});
 
-// [ KEY, { id: null, status: false } ]
-// this can only be so if the fillId is wrong
-// that is the id wasn't filled for whatever reason
+console.log('tree3 inserting root');
 
-// so we get I AM FILLED console.logged
-// AFTER updateLink applied
-// so basically what we are saying
-// is that Open and Close entries are inserted
-// then open close and are inserted again
-// but by that time, the insertion occurs, and split occurs immediately
-// so in that moment, the id still hasn't been filled
-// because the node table doesn't have them inserted yet!
+const [node4, tree4] = tree3.insertRoot({
+  name: 'NOPE!'
+});
+
+// this should not have that many objects!
+
+console.log(tree3._treeTable);
+console.log(tree4._treeTable);
+
+console.log(tree4._leftId);
+console.log(tree4._rightId);
+console.log(tree4._rootId);
+
+console.log(tree4._treeTable.get(0));
+console.log(tree4._treeTable.get(3));
+console.log(tree4._treeTable.get(1)); // this prevId is still 0, it should be 3, so this is wrong!
+
+// prevId is wrong
+
+// node.split doesn't have this problem
+// only leaf.split has this problem
+// leaf split is the only one in which we need to fix this
+// one way is for split to actually return 3 things
+// leafLeft, leafRight, leafRightOrig
+// that is the original right (if it exist) has the id added as well
+// and it has it cloned
+// wait we only have the id
+// we don't have the existing block
+// damn we would need to acquire the block from the treeTableT
+
+
+// why is tree4._treeTable.get(1) returning a Leaf with prevId set to 0
+// WHEN it should be set to 3
+// and it should be setttt!!?!?!?
