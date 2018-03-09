@@ -21,11 +21,22 @@ const [node, tree] = boTree.insertRoot({
   name: 'Hi I am Root!'
 });
 
-console.log(node);
-console.log(tree);
-
 const [node2, tree2] = tree.insertRoot({
   name: 'I am the new root!'
 });
 
-console.log(node2, tree2);
+// the parentId is not set for the left block
+// why is that?
+
+// [ KEY, { id: null, status: false } ]
+// this can only be so if the fillId is wrong
+// that is the id wasn't filled for whatever reason
+
+// so we get I AM FILLED console.logged
+// AFTER updateLink applied
+// so basically what we are saying
+// is that Open and Close entries are inserted
+// then open close and are inserted again
+// but by that time, the insertion occurs, and split occurs immediately
+// so in that moment, the id still hasn't been filled
+// because the node table doesn't have them inserted yet!
