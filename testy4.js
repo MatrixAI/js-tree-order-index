@@ -44,10 +44,6 @@ console.log(tree4._leftId);
 console.log(tree4._rightId);
 console.log(tree4._rootId);
 
-console.log(tree4._treeTable.get(0));
-console.log(tree4._treeTable.get(3));
-console.log(tree4._treeTable.get(1)); // this prevId is still 0, it should be 3, so this is wrong!
-
 // prevId is wrong
 
 // node.split doesn't have this problem
@@ -65,3 +61,24 @@ console.log(tree4._treeTable.get(1)); // this prevId is still 0, it should be 3,
 // why is tree4._treeTable.get(1) returning a Leaf with prevId set to 0
 // WHEN it should be set to 3
 // and it should be setttt!!?!?!?
+
+console.log(tree4._treeTable.get(0));
+console.log(tree4._treeTable.get(1));
+console.log(tree4._treeTable.get(2));
+console.log(tree4._treeTable.get(3));
+console.log(tree4._treeTable.get(4));
+console.log(tree4._treeTable.get(5));
+console.log(tree4._treeTable.get(6));
+console.log(tree4._treeTable.get(7));
+console.log(tree4._treeTable.get(8));
+console.log(tree4._treeTable.get(9));
+
+// several things are broken here:
+// 1. the count for several ArrayFixedDense is SOMEHOW a floating point number
+//  HOW IS THAT EVEN POSSIBLE? (the count isn't even properly updated)
+// this must mean ArrayFixedDense must be broken
+// cause this is just impossible
+// there's nothing in this code that sets the count
+
+// it is only nodes with incorrect count
+// how did this occur?
