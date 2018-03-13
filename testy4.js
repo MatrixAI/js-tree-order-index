@@ -66,5 +66,11 @@ console.log(tree4._treeTable.get(6));
 
 console.log(tree4._treeTable.get(0).children._array);
 console.log(tree4._treeTable.get(3).children._array);
-console.log(tree4._treeTable.get(4).children._array);
 console.log(tree4._treeTable.get(1).children._array);
+console.log(tree4._treeTable.get(4).children._array);
+
+// ok so we solve the problem with the weird splitting structure
+// but we have another problem
+// the insertion careting order is wrong
+// the 4 and 1 should be swapped around
+// and the next and prev ids are not consistent with the tree structure either
