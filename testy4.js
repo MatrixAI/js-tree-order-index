@@ -1,5 +1,5 @@
 import NodeDataScript from './lib/NodeTables/NodeDataScript.js';
-import BOTree from './lib/OrderIndexes/BOTree.js';
+import BOITree from './lib/OrderIndex/BOITree.js';
 
 const nodeTable = new NodeDataScript({
   new: true,
@@ -8,7 +8,7 @@ const nodeTable = new NodeDataScript({
   keysIndexedObjectsTagSuffix: '-tag'
 });
 
-const tree0 = new BOTree({
+const tree0 = new BOITree({
   blockSize: 4,
   nodeTable: nodeTable
 });
