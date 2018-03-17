@@ -69,6 +69,14 @@ console.log(tree4._treeTable.get(3).children._array);
 console.log(tree4._treeTable.get(1).children._array);
 console.log(tree4._treeTable.get(4).children._array);
 
+console.log('first cursor', tree4.firstCursor());
+console.log('next cursor', tree4.nextCursor(tree4.firstCursor()));
+console.log('next 2 cursor', tree4.nextCursor(tree4.nextCursor(tree4.firstCursor())));
+
+console.log('last cursor', tree4.lastCursor());
+console.log('prev cursor', tree4.prevCursor(tree4.lastCursor()));
+
+
 // ok so we solve the problem with the weird splitting structure
 // but we have another problem
 // the insertion careting order is wrong
