@@ -87,6 +87,10 @@ console.log(cursorFirst.next());
 console.log(cursorFirst.next());
 console.log(cursorFirst.getEntry());
 
+console.log(cursorFirst);
+console.log(cursorFirst.toLink());
+console.log(tree4._getCursor(cursorFirst.toLink()));
+
 console.log(cursorFirst.prev());
 console.log(cursorFirst.prev());
 console.log(cursorFirst.prev());
@@ -95,6 +99,8 @@ console.log(cursorFirst.prev());
 console.log(cursorFirst.prev());
 console.log(cursorFirst.prev());
 console.log(cursorFirst.prev());
+
+
 
 // console.log('first cursor', tree4.firstCursor());
 // console.log('last cursor', tree4.firstCursor());
