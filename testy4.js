@@ -69,12 +69,36 @@ console.log(tree4._treeTable.get(3).children._array);
 console.log(tree4._treeTable.get(1).children._array);
 console.log(tree4._treeTable.get(4).children._array);
 
-console.log('first cursor', tree4.firstCursor());
-console.log('next cursor', tree4.nextCursor(tree4.firstCursor()));
-console.log('next 2 cursor', tree4.nextCursor(tree4.nextCursor(tree4.firstCursor())));
+console.log(tree4._nodeTable.getNodes());
 
-console.log('last cursor', tree4.lastCursor());
-console.log('prev cursor', tree4.prevCursor(tree4.lastCursor()));
+const cursorFirst = tree4.firstCursor();
+
+// this is wrong!?
+console.log(cursorFirst.getEntry());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.next());
+console.log(cursorFirst.getEntry());
+
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+console.log(cursorFirst.prev());
+
+// console.log('first cursor', tree4.firstCursor());
+// console.log('last cursor', tree4.firstCursor());
+
 
 
 // ok so we solve the problem with the weird splitting structure
