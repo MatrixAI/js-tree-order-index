@@ -73,32 +73,31 @@ console.log(tree4._nodeTable.getNodes());
 
 const cursorFirst = tree4.firstCursor();
 
-// this is wrong!?
+console.log('ITERATING');
+
 console.log(cursorFirst.getEntry());
 console.log(cursorFirst.next());
 console.log(cursorFirst.next());
 console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
+
+console.log(cursorFirst.up());
+console.log(cursorFirst.up());
+console.log(cursorFirst.up());
+
+// infinite loop here (this should be done)
+console.log(cursorFirst.up());
+console.log(cursorFirst.up());
+
 console.log(cursorFirst.getEntry());
 
-console.log(cursorFirst);
-console.log(cursorFirst.toLink());
-console.log(tree4._getCursor(cursorFirst.toLink()));
+console.log(cursorFirst.down());
+console.log(cursorFirst.down());
+console.log(cursorFirst.down());
+console.log(cursorFirst.down());
+console.log(cursorFirst.down());
+console.log(cursorFirst.down());
 
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
-console.log(cursorFirst.prev());
+console.log(cursorFirst.getEntry());
 
 
 
