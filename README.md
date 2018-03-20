@@ -1280,3 +1280,13 @@ Ok so insertion root is done.
 Now we should be able to add back some of the other functions.
 
 We still need to figure out cursor manipulation.
+
+---
+
+In trying to implement insert child. We met a problem. We realised there was an assumption that any block we are attempting to insert into (which is led to it by the cursor we are using), will have at least 2 spaces in it. This meant we needed to change how our insertion functions worked in that it would always leave 2 spaces there.
+
+However both insert pair and insert singular did not guarantee this. The insert pair had to be changed from checking if there was greater than 2 spaces, to checking if there was greater than 3 spaces, which mean there was at least 4 spaces. Then with 4 spaces, inserting a pair would always leave 2 spaces left. Anything less would involve a split to have at least 2 spaces left.
+
+For insertion of singular, we had to change that to check greater than 2, as in check there were at least 3 spaces. If there was, inserting a singular would leave 2 spaces there as well.
+
+However this resulted in other errors. It turns out caret and caretPair is using the length for bounding the position, which menas the returned position is not actually the position at which something was caretted. Instead we use count, and this ensures that the returned position is the actual index at which something was caretted.
