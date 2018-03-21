@@ -33,81 +33,88 @@ const [node4, tree4] = tree3.insertRoot({
 
 // this should not have that many objects!
 
-// console.log('TREE0', tree0._treeTable);
-// console.log('TREE1', tree1._treeTable);
-// // console.log(tree1._treeTable.get(0));
-// console.log('TREE2', tree2._treeTable);
+console.log('TREE0', tree0._treeTable);
+console.log('TREE1', tree1._treeTable);
+console.log('TREE2', tree2._treeTable);
+console.log('TREE3', tree3._treeTable);
 
-// console.log(tree2._treeTable.get(0).children._array);
-// console.log(tree2._treeTable.get(1).children._array);
-// console.log(tree2._treeTable.get(2).children._array);
+// this is correct
+console.log(tree3._treeTable.get(0).children._array);
+console.log(tree3._treeTable.get(3).children._array);
+console.log(tree3._treeTable.get(1).children._array);
+console.log(tree3._treeTable.get(4).children._array);
 
-// console.log('TREE3', tree3._treeTable);
-
-// console.log(tree3._treeTable.get(0));
-// console.log(tree3._treeTable.get(1));
-// console.log(tree3._treeTable.get(2));
-
-// console.log('TREE4', tree4._treeTable);
+// when we get to tree4
+// for some reason
+// the insertion has splitted 0 or 3 with an extra 7
+// block in the middle
+// even though it is unnecessary
+console.log('TREE4', tree4._treeTable);
 
 // console.log('LENGTH of the table', tree4._treeTable.count());
 
-// console.log('ROOTID', tree4._rootId);
-// console.log('LEFTID', tree4._leftId);
-// console.log('RIGHTID', tree4._rightId);
-
-// console.log(tree4._treeTable.get(0));
-// console.log(tree4._treeTable.get(1));
-// console.log(tree4._treeTable.get(2));
-// console.log(tree4._treeTable.get(3));
-// console.log(tree4._treeTable.get(4));
-// console.log(tree4._treeTable.get(5));
-// console.log(tree4._treeTable.get(6));
+console.log('ROOTID', tree4._rootId);
+console.log('LEFTID', tree4._leftId);
+console.log('RIGHTID', tree4._rightId);
 
 console.log(tree4._treeTable.get(0).children._array);
+console.log(tree4._treeTable.get(7).children._array);
 console.log(tree4._treeTable.get(3).children._array);
 console.log(tree4._treeTable.get(1).children._array);
 console.log(tree4._treeTable.get(4).children._array);
 
-console.log(tree4._nodeTable.getNodes());
+console.log(tree4._treeTable.get(0));
+console.log(tree4._treeTable.get(1));
+console.log(tree4._treeTable.get(2));
+console.log(tree4._treeTable.get(3));
+console.log(tree4._treeTable.get(4));
+console.log(tree4._treeTable.get(5));
+console.log(tree4._treeTable.get(6));
+console.log(tree4._treeTable.get(7));
 
-const cursorFirst = tree4.firstCursor();
-
-console.log('ITERATING');
-
-console.log(cursorFirst.getEntry());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-console.log(cursorFirst.next());
-
-console.log(cursorFirst.up());
-console.log(cursorFirst.up());
-console.log(cursorFirst.up());
-
-// infinite loop here (this should be done)
-console.log(cursorFirst.up());
-console.log(cursorFirst.up());
-
-console.log(cursorFirst.getEntry());
-
-console.log(cursorFirst.down());
-console.log(cursorFirst.down());
-console.log(cursorFirst.down());
-console.log(cursorFirst.down());
-console.log(cursorFirst.down());
-console.log(cursorFirst.down());
-
-console.log(cursorFirst.getEntry());
+// // there's node 7 for some reason
+// // there's a whole another node for some reason
 
 
+// console.log(tree4._nodeTable.getNodes());
 
-// console.log('first cursor', tree4.firstCursor());
-// console.log('last cursor', tree4.firstCursor());
+// const cursorFirst = tree4.firstCursor();
+
+// console.log('ITERATING');
+
+// console.log(cursorFirst.getEntry());
+// console.log(cursorFirst.next());
+// console.log(cursorFirst.next());
+// console.log(cursorFirst.next());
+
+// console.log(cursorFirst.up());
+// console.log(cursorFirst.up());
+// console.log(cursorFirst.up());
+
+// // infinite loop here (this should be done)
+// console.log(cursorFirst.up());
+// console.log(cursorFirst.up());
+
+// console.log(cursorFirst.getEntry());
+
+// console.log(cursorFirst.down());
+// console.log(cursorFirst.down());
+// console.log(cursorFirst.down());
+// console.log(cursorFirst.down());
+// console.log(cursorFirst.down());
+// console.log(cursorFirst.down());
+
+// console.log(cursorFirst.getEntry());
 
 
 
-// ok so we solve the problem with the weird splitting structure
-// but we have another problem
-// the insertion careting order is wrong
-// the 4 and 1 should be swapped around
-// and the next and prev ids are not consistent with the tree structure either
+// // console.log('first cursor', tree4.firstCursor());
+// // console.log('last cursor', tree4.firstCursor());
+
+
+
+// // ok so we solve the problem with the weird splitting structure
+// // but we have another problem
+// // the insertion careting order is wrong
+// // the 4 and 1 should be swapped around
+// // and the next and prev ids are not consistent with the tree structure either
