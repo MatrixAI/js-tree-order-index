@@ -1290,3 +1290,16 @@ However both insert pair and insert singular did not guarantee this. The insert 
 For insertion of singular, we had to change that to check greater than 2, as in check there were at least 3 spaces. If there was, inserting a singular would leave 2 spaces there as well.
 
 However this resulted in other errors. It turns out caret and caretPair is using the length for bounding the position, which menas the returned position is not actually the position at which something was caretted. Instead we use count, and this ensures that the returned position is the actual index at which something was caretted.
+
+---
+
+Use `((var: any): type)`, to typecast anything. It can avoid needing to write lots of flowfixme. This is when you are overriding the flow types to say that you know that the type of this is `type`. Such as then something returns a maybe, but in this case you know that must be not a maybe. Note that Haskell has something similar where the `fromMaybe` makes sure to that you know that the value is not a Nothing. Alternatively you can use a check to check an exception. But here you don't want to check for exceptions due to performance, whereas for Haskell the `fromMaybe` actually performs unwrapping for you, so it's pretty free.
+
+```
+function fromJust<t>(value: ?t) {
+  if (!value) throw new Error;
+  return value;
+}
+```
+
+That would be the JS version.
