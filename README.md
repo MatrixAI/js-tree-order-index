@@ -1303,3 +1303,49 @@ function fromJust<t>(value: ?t) {
 ```
 
 That would be the JS version.
+
+---
+
+Growth always maintains balance, but it also grows the tree sometimes with underfull blocks. However we only ever merge underfull blocks when doing deletions. Well that's what happens in a traditional b+tree. However the paper demonstrates doing this when a relocation.
+
+Our splits will invariably create situations where there are underfull blocks. Especially as a block gets split in half, and there's always at least 2 spaces. There will be situations where there are 2 blocks that have only 1 element there. And you can merge them together while still maintaining 2 space free. Similar for node blocks which you only need to maintain the invariant that the blocks must have 1 space empty.
+
+But also you don't actually just want to eagerly merge, that would be essentially trying to keep the memory usage as low as possible. But this isnt' actually always good for performance, since you don't always want to merge just because. The merge usually happens when 2 blocks are "underfull". So what is the "underfull" metric. It is actually where the blocks can have less than half. But in our case we still need 2 or 1. So it's actually the total length minus that. And if there is less than half, then we can merge them.
+
+However merging is also a cost. The split involves a half copy to another block. Merging would also involve a half copy.
+
+When we are splitting, we have to insert a pointer into the parent. This may traverse up to the root, thus creating a new root.
+
+But when we are merging, we are only subtracting the pointer in the parent. This actually means it is limited to only the parent, there is no need to traverse to the root. This makes merging a cheaper operation.
+
+However merging also requires finding the sibling block. And while this is easier at the leaf. The node blocks don't have pointers to the left and right. Can we do this? Does it make sense to? Is it not possible to rely on the parent block to find what our sibling is?
+
+Right now when we are splitting, we find where we need to caret into the parent using a linear search.
+
+Wait a minute, the `insertIntoNode` function is wrong. It takes the `existingId` and `newId`. But these are the ids of the leaf blocks. These are not indexes. It later uses `findIndex` to try to find the right index.
+
+Wait `findIndex` takes the ids, cause it only has ids.
+
+Ok I get it.
+
+Holy shit, each leaf block and node block also has a gap key. They also has a pointer and a gapkey. So instead of storing ids directly in the node table, they are also storing pointers and gapkeys.
+
+Right now our nodes are storing just ids. And our parent pointers are just ids as well.
+
+Our links are also just ID + GK.
+
+So all we need to do is convert our parent pointers to ID+GK. And the nodes instead of just carrying ID. They also carry the GK.
+
+The main difference between our BOTree is instead of using pointers we are using ids. So an extra level of indirection enables immutability.
+
+So instead of linear search, we also have interpolation search up to the parent nodes. And also gap key generation... etc.
+
+This also means there is a relabelling procedure as well. That needs to relabel all the child blocks and their respective gapkeys due to the fact that we need to relabel all of them. All of this will need to occur within the transactional context, so we can update the treetable all in one go.
+
+---
+
+Ok I have changed Tree.js to BlockTree.js. We now are using `GapLink` with object with link and key. The link is a pointer, here it's an id. But we need to know now know how to generate the keys for the children.
+
+Previously we used `generateGapKeys` for allocating multiple children. But now we need to do this with just single children.
+
+Right now the Leaf class accepts the children. But we should export static functions that do this for Leaf.
