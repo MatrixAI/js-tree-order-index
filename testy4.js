@@ -58,11 +58,23 @@ const [nodeId3, tree3] = tree2.insertChild(nodeId1, -1, {
   [ 0, 3, 1, <1 empty item> ]
  */
 
+// this is wrong
+// we are getting 0 3 1
+// but we are getting
+
+// OPEN1
 
 console.log(tree3._treeTable);
 console.log(tree3._treeTable.get(0).children._array);
 console.log(tree3._treeTable.get(1).children._array);
 console.log(tree3._treeTable.get(3).children._array);
+
 console.log(tree3._treeTable.get(2).children._array);
+
+// no 0 node
+// we start at 1
+console.log(tree3._nodeTable.getNode(1));
+console.log(tree3._nodeTable.getNode(2));
+console.log(tree3._nodeTable.getNode(3));
 
 // wait I don't think 2's level is correct
