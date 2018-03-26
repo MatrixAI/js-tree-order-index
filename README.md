@@ -1349,3 +1349,7 @@ Ok I have changed Tree.js to BlockTree.js. We now are using `GapLink` with objec
 Previously we used `generateGapKeys` for allocating multiple children. But now we need to do this with just single children.
 
 Right now the Leaf class accepts the children. But we should export static functions that do this for Leaf.
+
+---
+
+It may be possible to generalise the insert root to insert parent. Where insert root just inserts the parent of the root id. That's all! But the problem is that no longer can just increase the blockRoot, but instead we would have to do it for the least common ancestor of all the in-between entries. For the root, that would be the blockRoot. But if for arbitrary parents, one has to find the least common ancestor.
