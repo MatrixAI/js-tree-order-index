@@ -1353,3 +1353,89 @@ Right now the Leaf class accepts the children. But we should export static funct
 ---
 
 It may be possible to generalise the insert root to insert parent. Where insert root just inserts the parent of the root id. That's all! But the problem is that no longer can just increase the blockRoot, but instead we would have to do it for the least common ancestor of all the in-between entries. For the root, that would be the blockRoot. But if for arbitrary parents, one has to find the least common ancestor.
+
+Notice how we do `++blockRoot.levelDelta`.
+
+
+---
+
+These are the 2 things I'm currently working on. This creates the tree index!
+
+```
+import NodeDataScript from './lib/NodeTables/NodeDataScript.js';
+import BOITree from './lib/OrderIndex/BOITree.js';
+```
+
+The `NodeDataScript` keeps the node table. The BOITree keeps indexes into the table. It represents an abstract index relying on only Node IDs.
+
+We also have the node which needs to store the data. Generally the idea is that the internal data should be indexed somehow else. So one can search for a node based on some characteristics, and then traverse the tree using the BOITree.
+
+But different implementations may implement it differently. And then the problem is that certain properties key names will not be allowed in certain implementations. In this case all of our key properties are flat objects.
+
+Thing's like level is needs to find the right level rather than using `_level` which is the cached level. Accessing the `.level` must then make the node clean when it comes to acquiring the level, that might be stored in the tree.
+
+We have currently `insertRoot` and `insertChild` and `insertSibling` working. Now we are working on `insertParent`.
+
+
+```
+tree.insertParent(nodeId, {
+  name: ...
+})
+```
+
+This means the node id gets a new parent. The parent must then have an extra child. Note that this means. Imagine a parent with 3 children. If one of the children gets a new parent. Then that means that the there's a height caret. That occurs.
+
+The `insertParent` is a generalisation of `insertRoot`.
+
+---
+
+We need to make the behaviour of `caretPair` more obvious.
+
+What `caret` does, is that `caretRight` inserts the element at that position and moves all existing elements to the right. Same with `caretLeft`.
+
+But if `caretPair` takes 2 positions, the position that just got inserted might change what other things need to work.
+
+If you caret something. You are updating the node link as well. Existing positions are now wrong. This is why caret pair exists. To make the idea of careting into 2 positions more easier. For this to make sense. We need to consider this:
+
+```
+This is what you want:
+
+0,0
+WRONG
+
+0,1
+[S,E,0,1]
+
+caretRight(0,S)
+caretRight(1,E)
+
+0,2
+[S,0,E,1]
+
+caretRight(0,S)
+caretRight(2,E)
+
+1,2
+[0,S,E,1]
+
+caretRight(1,S)
+caretRight(2,E)
+
+1,3
+[0,S,1,E]
+
+2,3
+[0,1,S,E]
+
+0,0
+[E,S,0,1]
+
+1,1
+[0,E,S,1]
+```
+
+This behaviour is just `caretRight` then `caretRight`. It is already what we have.
+
+So how do this when you do have a deterministic caretRight?
+
+We maintain an invariant where there is always at least 2 spaces ready to be inserted. Although we can do this with just halves as well too though.
